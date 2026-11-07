@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VeruFuzz · Verus verification progress</title>
+<style>
+  :root {
+    --page: #f9f9f7;
+    --surface-1: #fcfcfb;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-exec: #2a78d6;
+    --series-spec: #1baf7a;
+    --series-proof: #eda100;
+    --series-trusted: #008300;
+    --cov-bar: #2a78d6;
+    --cov-track: #cde2fb;
+    --good: #0ca30c;
+    --known: #eda100;
+    --reported: #2a78d6;
+    --fp: #b4552d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d;
+      --surface-1: #1a1a19;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --series-exec: #3987e5;
+      --series-spec: #199e70;
+      --series-proof: #c98500;
+      --series-trusted: #008300;
+      --cov-bar: #3987e5;
+      --cov-track: #184f95;
+      --reported: #3987e5;
+      --fp: #d0784e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 20px 48px;
+    background: var(--page); color: var(--text-primary);
+    font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header h1 { font-size: 22px; font-weight: 650; margin: 0 0 4px; }
+  header p.sub { color: var(--text-secondary); margin: 0 0 6px; }
+  header p.meta { color: var(--text-muted); font-size: 12.5px; margin: 0; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px; margin: 22px 0 8px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile .label { color: var(--text-secondary); font-size: 12.5px; }
+  .tile .value { font-weight: 600; font-size: 26px; margin: 2px 0 1px; line-height: 1.15; }
+  .tile .sub { color: var(--text-muted); font-size: 12px; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin: 18px 0; }
+  .card h2 { font-size: 15.5px; font-weight: 650; margin: 0 0 2px; }
+  .card p.note { color: var(--text-secondary); font-size: 12.5px; margin: 2px 0 14px; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 10px; }
+  .legend .it { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12.5px; }
+  .legend .sw { width: 12px; height: 12px; border-radius: 3px; }
+
+  svg { display: block; width: 100%; height: auto; }
+  svg text { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; }
+  svg .cat { fill: var(--text-secondary); }
+  svg .tick { fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+  svg .vlab { fill: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  svg .gridline { stroke: var(--grid); stroke-width: 1; }
+  svg .axis { stroke: var(--baseline); stroke-width: 1; }
+  svg .seg { cursor: default; }
+  svg .seg.hot { opacity: 0.82; }
+  svg .band:focus { outline: none; }
+  svg .seg:focus { outline: 2px solid var(--baseline); outline-offset: 1px; }
+
+  details.tbl { margin-top: 12px; border-top: 1px solid var(--grid); padding-top: 10px; }
+  details.tbl summary { color: var(--text-secondary); font-size: 12.5px; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; font-size: 12.5px; }
+  th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 5px 8px; border-bottom: 1px solid var(--baseline); white-space: nowrap; }
+  td { padding: 5px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .findings-wrap { overflow-x: auto; }
+  .findings { min-width: 860px; }
+  .findings td { font-size: 12.8px; }
+  .findings code { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--page); padding: 1px 4px; border-radius: 4px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 99px; padding: 1px 9px 1px 7px; font-size: 11.5px; color: var(--text-primary); white-space: nowrap; }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .chip.c-fixed .dot { background: var(--good); } .chip.c-fixed .ic { color: var(--good); }
+  .chip.c-reported .dot { background: var(--reported); } .chip.c-reported .ic { color: var(--reported); }
+  .chip.c-known .dot { background: var(--known); }
+  .chip.c-fp .dot { background: var(--fp); } .chip.c-fp .ic { color: var(--fp); }
+  .chip .ic { font-style: normal; font-weight: 700; }
+  .kind { display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); white-space: nowrap; }
+  .kind b { color: var(--text-primary); font-weight: 600; }
+  a { color: var(--text-primary); text-decoration: underline; text-decoration-color: var(--baseline); text-underline-offset: 2px; }
+  a:hover { text-decoration-color: var(--text-primary); }
+
+  @media print {
+    body { padding: 0; background: #fff; color: #000; }
+    .findings-wrap { overflow: visible; }
+    .findings { min-width: 0; table-layout: auto; }
+    .findings td { word-break: break-word; }
+    .findings a { word-break: break-all; }
+    #tooltip { display: none !important; }
+  }
+  #tooltip {
+    position: fixed; z-index: 10; pointer-events: none; display: none;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+    max-width: 300px;
+  }
+  #tooltip .v { font-weight: 650; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  #tooltip .k { color: var(--text-secondary); font-size: 12px; }
+  #tooltip .row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+  #tooltip .key { width: 10px; height: 3px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>VeruFuzz · Verus verification progress</h1>
+    <p class="meta">Updated 2026-11-03 (initial version 2026-10-29) · verus 0.2026.10.26</p>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>Verified code composition per crate</h2>
+    <p class="note">Line counts split into exec / spec / proof / trusted; hover for values.</p>
+    <div class="legend" id="legend-comp"></div>
+    <svg id="svg-comp" role="img" aria-label="Stacked bar chart of verified code composition across 21 crates"></svg>
+    <details class="tbl"><summary>Table view</summary><div id="tbl-comp"></div></details>
+  </div>
+
+  <div class="card">
+    <h2>Exec translation coverage of the upstream sources</h2>
+    <p class="note">Translated exec / upstream exec. The denominator includes upstream inline tests, so this is a lower bound of net coverage.</p>
+    <svg id="svg-cov" role="img" aria-label="Bar chart of upstream exec translation coverage per crate"></svg>
+    <p class="note" style="margin-top:10px">‡ = the upstream is mirrored in full and the numerator adds verified-side exec LoC, so ratios &gt; 100% are shown capped at 100. Version = latest crates.io release; pin = the commit actually verified.</p>
+    <details class="tbl"><summary>Table view</summary><div id="tbl-cov"></div></details>
+  </div>
+
+  <div class="card">
+    <h2>Bugs</h2>
+    <p class="note">18 findings (incl. 1 withdrawn FP), each anchored on a failed Verus obligation and backed by a PoC / runtime reproduction. Ordered: our reports first, then upstream-reported; within each group: fixed → fixing PR → issue open → FP withdrawn.</p>
+    <div class="findings-wrap" id="findings"></div>
+    <p class="note" style="margin-top:10px">① code bug · ② doc issue. Status: ✓ fixed · ↗ reported · ● reported by others / fix PR exists · ✕ FP withdrawn.</p>
+  </div>
+
+</div>
+<div id="tooltip"></div>
+
+<script>
+"use strict";
+/* ---- Data (line_count counts, 2026-10-29; +7 crates 2026-10-31; +bitflags 2026-11-01) ---- */
+const S = {
+  exec:    { name: "exec (translated)",  css: "var(--series-exec)" },
+  spec:    { name: "spec (contracts)",   css: "var(--series-spec)" },
+  proof:   { name: "proof (proofs)",     css: "var(--series-proof)" },
+  trusted: { name: "trusted (assumptions)", css: "var(--series-trusted)" },
+};
+const CRATES = [
+  { crate: "glob",            exec: 450, spec: 475, proof: 240, trusted:   0, comment: 449, hExec:   1, up:  950, cov: 47.4,
+    ver: "0.3.4", sha: "057cef2824f5a96f738e52d7d8ca3e024381bcc6",
+    res: "src 68v/1e · ut_pattern 75v/1e (matches_from obligations discharged for every star path; corrected figure, 2026-11-03 continued batch)", anchor: "1 (F1 anchor :964, reconciled to the current :138)" },
+  { crate: "byteorder",       exec: 299, spec: 286, proof: 815, trusted: 108, comment: 619, hExec:  92, up:  883, cov: 33.9,
+    ver: "1.5.0", sha: "5a82625fae462e8ba64cec8146b24a372b4d75c6",
+    res: "src lib 52v/2e · io 32v/6e · ut_roundtrip 58v/2e · cov_generic 57v/0e (2026-11-03 continued batch)", anchor: "8 (F5 all bit-paths + F3 both 64/128 widths)" },
+  { crate: "slab",            exec: 347, spec: 409, proof: 244, trusted:  13, comment: 610, hExec: 106, up:  609, cov: 57.0,
+    ver: "0.4.12", sha: "7d1d8ab00a7b8b1978b4bf21d9ae9633ac8c0b05",
+    res: "src 55v/5e · ut_slab 58v/5e · cover_diffset 59v/6e (batches 1–5 closed, 2026-11-03 continued batch)", anchor: "F1 six diagnostic sites (reconciled via #168) + D1 three-function shape anchors + docpanic anchor" },
+  { crate: "generational-arena", exec: 413, spec: 383, proof: 277, trusted: 23, comment: 562, hExec: 148, up: 609, cov: 67.8,
+    ver: "0.2.9", sha: "6dbc29e573aa192a2c7ae9c7f968eb8853311294",
+    res: "src 55v/1e · quickchecks 59v/1e · ut_21 58v/1e · ut_covdiff 63v/1e (quickchecks' 4 errors cleared, 2026-11-03 continued batch)", anchor: "1 (:147 = F1/F6 obligation anchors, reconciled against the historical open issue)" },
+  { crate: "humantime",       exec: 574, spec: 598, proof:  68, trusted:  32, comment: 464, hExec:  16, up: 1228, cov: 46.7,
+    ver: "2.4.0", sha: "997ff566cc731e3ece5c792c8b83dd78e459f202",
+    res: "src 71v/1e · roundtrip 38v/0e · ut_parse 100v/1e (both parse state machines fully discharged, 2026-11-03 continued batch)", anchor: "1 (F1 panic anchor, reconciled via #76; line numbers shifted by the translation)" },
+  { crate: "form_urlencoded", exec: 297, spec: 280, proof: 114, trusted:   0, comment: 214, hExec: 195, up:  257, cov: 115.6, cap100: true,
+    ver: "1.2.2", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
+    res: "src 54v/1e · 3 harnesses 61v/69v/68v, each 1e · 2026-11-02 diff-set reconciliation (public surface fully covered)", anchor: "1 (for_suffix panic anchor; fixed upstream #1168 / PR #1172)" },
+  { crate: "num-integer",     exec: 263, spec:  91, proof: 141, trusted:  12, comment: 310, hExec: 356, up:  357, cov: 73.7,
+    ver: "0.1.47", sha: "765fd9b3eb9397471d41b9f613e530f6d9d6383f",
+    res: "src lib 23v/13e · roots 3v/2e (documented control) · average 66v/0e · misc 19v/0e · ut_div 9v/0e (2026-11-03 continued batch, tail cleared)", anchor: "15 (F1–F5 obligation family; roots 2e are the # Panics control group)" },
+  { crate: "hex",             exec: 198, spec: 197, proof: 272, trusted:   0, comment: 159, hExec: 125, up:  320, cov: 61.9,
+    ver: "0.4.3", sha: "e25a8701f7f6b5ec4acedffcb4a45cfb69cc34eb",
+    res: "4 harnesses 139v/0e (including re-verification of the cited src) · rt matrix decode 65536 + encode 512, all matching", anchor: "— (the sole finding F1 is a doc bug, merged upstream)" },
+  { crate: "strsim",          exec: 575, spec: 280, proof: 1637, trusted:   0, comment: 321, hExec: 132, up:  804, cov: 71.5,
+    ver: "0.11.1", sha: "dacc84c0dc61eff0ee0ff66962bcf2e17018ad26",
+    res: "src 76v/0e · ut_hamming 77v/0e · ut_distance 79v/0e · ut_dameru 80v/0e (4 blocked-API errors cleared, 2026-11-03 continued batch)", anchor: "— (0e; 0 findings)" },
+  { crate: "siphasher",       exec: 841, spec: 410, proof:  40, trusted:   0, comment: 174, hExec: 371, up: 1080, cov: 77.9,
+    ver: "1.0.4", sha: "2fcf2a742340824ee23328e6eba4bc7ea0e52613",
+    res: "src 62v/0e · 5 harnesses, 559 obligations 0e · rt 352/352 diff=0 · all KATs pass", anchor: "— (0e; the big-endian observation obs-1 was not filed)" },
+  { crate: "untrusted",       exec: 186, spec: 193, proof:   7, trusted:   8, comment: 145, hExec: 359, up:  147, cov: 126.5, cap100: true,
+    ver: "0.9.0", sha: "b7c4aea36ca2ddcec71c323fb7b27d5724d73f3a",
+    res: "src 29v/0e · ut_tests 46v/0e · phase4 diff-set 34v/0e · cargo 13/13 · the universal never-panic claim holds", anchor: "— (0e)" },
+  { crate: "bit-vec",         exec: 424, spec: 523, proof: 2016, trusted:   0, comment: 267, hExec: 149, up: 1889, cov: 22.4,
+    ver: "0.10.1", sha: "cd5b4392be151fb507f3bdbf71ce1e73885dbc28",
+    res: "src 188v/0e · ut_core 205v/0e · d_diffset 218v/0e (D1–D2a discharged in three batches; D4 queued for later, 2026-11-03 continued batch)", anchor: "— (0e; the N1 doc-type finding is listed in the FINDINGS table)" },
+  { crate: "crc",             exec: 921, spec: 872, proof: 1753, trusted: 16, comment: 582, hExec:   0, up: 1228, cov: 75.0,
+    ver: "3.4.0", sha: "1894aa9f184d44cf1226aeb3048a3e91fc1b8df4",
+    res: "src 10 files, canonically 0e · 3 harnesses, all green · rt 107 ops ×12 lengths ×3 channels + KAT fails=0", anchor: "— (0e; 5 Verus-toolchain observations filed separately)" },
+  { crate: "base64",          exec: 413, spec: 285, proof:  293, trusted:   0, comment: 330, hExec: 138, up: 5100, cov: 8.1,
+    ver: "0.23.1", sha: "5b98ee180cc7c2a64af6cb12c724b1721550e0d0",
+    res: "src 43v/2e (2e = add_padding doc anchors) · harness 21v/2e · rt both profiles ✓", anchor: "2 (add_padding doc: pre-fix index out of bounds at encode.rs:142)" },
+  { crate: "base64ct",        exec: 515, spec: 722, proof: 1029, trusted:   0, comment: 508, hExec:  31, up: 1068, cov: 48.2,
+    ver: "1.8.3", sha: "4c5fadb155ebc05c4a8a3abc05e4e64a6a100614",
+    res: "std padded/unpadded, all depths 0e · six alphabets bit-level all green · harness 113/126/120v/0e", anchor: "— (0e; 0 findings)" },
+  { crate: "data-encoding",   exec: 326, spec: 373, proof:  370, trusted:   0, comment: 176, hExec: 140, up: 1412, cov: 23.1,
+    ver: "2.12.0-git", sha: "53e2ff65eb3157a7b113b8a1a8b3fc89ce898dbf",
+    res: "src 43v/0e · 3 harnesses 50/50/51v/0e · rt matrix 256×2 tables, fully elementwise matching", anchor: "— (0e; the sole finding F1 is of doc type)" },
+  { crate: "integer-encoding", exec: 749, spec: 329, proof:  599, trusted:   0, comment: 307, hExec: 295, up:  488, cov: 153.5, cap100: true,
+    ver: "4.1.0", sha: "e0a10d01e86a38d0df177676c62f9a10c845ab53",
+    res: "src 4 files 135v/34e (fixed.rs 59/0) · 3 harnesses · rt 4 PoC, both profiles ✓", anchor: "F3 write_fixedint 8-byte cap panic anchor (writer.rs:69-77)" },
+  { crate: "percent-encoding", exec: 209, spec: 246, proof:  371, trusted:   0, comment: 242, hExec: 137, up:  356, cov: 58.7,
+    ver: "2.3.2", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
+    res: "src 2 files 42v/0e · 3 harnesses 67/70/64v/0e · rt matrix M1–M6 all pass", anchor: "1 (AsciiSet::add OOB isomorphic anchor, merged into #1132)" },
+  { crate: "semver",          exec: 1011, spec: 1191, proof:  242, trusted:   0, comment: 385, hExec: 207, up: 1135, cov: 89.1,
+    ver: "1.0.28", sha: "280ebcb6edac3aa4cdc545dbff8a26c5ac4861fe",
+    res: "src 70v/19e · harness 77v/34e (the residual errors are translation-side gaps, not upstream anchors)", anchor: "— (0 findings)" },
+  { crate: "unicode-segmentation", exec: 210, spec: 574, proof:  184, trusted: 538, comment: 277, hExec: 362, up: 4866, cov: 4.3,
+    ver: "1.13.3", sha: "e445e101b129862148127c9e41ab4486b0125232",
+    res: "src+harness 338v/0e (table-driven external contracts) · rt 1,112,064 code points, axiom-level fully verified", anchor: "— (0e; the F1 code-type finding was merged into #182)" },
+  { crate: "bitflags",          exec: 435, spec: 388, proof:  324, trusted:   0, comment: 328, hExec: 422, up: 2374, cov: 18.3,
+    ver: "2.13.2", sha: "8384f6f6e1fd1ab3f448ccf17d400a9e1d6a5280",
+    res: "src 108v/0e · 4 harnesses 663v/0e · legacy PoC 62v/0e · rt not triggered (0 findings)", anchor: "— (0e; Flags trait, all 25 default bodies monomorphized + macro≡trait equivalence group + iterator semantic model)" },
+];
+const T = { exec: 9656, spec: 9105, proof: 11036, trusted: 750, comment: 7429, hExec: 3782, up: 27160, cov: 35.6 };
+
+const FINDINGS = [
+  { crate: "form_urlencoded", what: "for_suffix panics when start_position &gt; target.len() — undocumented", site: "lib.rs:222-229", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/servo/rust-url/pull/1172", linkTxt: "servo/rust-url#1172" },
+  { crate: "byteorder", what: "write_uint family: nbytes &lt;= buf.len() precondition missing from # Panics", site: "lib.rs:1952/1966", kind: "② Docs",
+    st: "reported", stTxt: "Reported", link: "https://github.com/BurntSushi/byteorder/pull/230", linkTxt: "byteorder#230" },
+  { crate: "num-integer", what: "binomial(5,−3)==1: no domain guard for k&lt;0; multinomial is order-dependent", site: "lib.rs:1150-1168", kind: "② Docs",
+    st: "reported", stTxt: "Reported", link: "https://github.com/rust-num/num-integer/pull/84", linkTxt: "num-integer#84" },
+  { crate: "num-integer", what: "is_multiple_of(MIN, −1) lacks the −1 guard", site: "lib.rs:574", kind: "② Docs",
+    st: "reported", stTxt: "Reported", link: "https://github.com/rust-num/num-integer/pull/83", linkTxt: "num-integer#83" },
+  { crate: "bit-vec", what: "nor/xnor with n%32&gt;0 break the documented “Returns true if self changed”", site: "lib.rs:1214-1221/1248-1255", kind: "② Docs",
+    st: "reported", stTxt: "Reported", link: "https://github.com/contain-rs/bit-vec/issues/165", linkTxt: "bit-vec#165" },
+  { crate: "integer-encoding", what: "read_varint: ① overflow misreported as EOF (doc says truncated); ② overlong varint consumes one extra byte", site: "reader.rs:19-21 doc / :95-107 impl", kind: "①/②",
+    st: "reported", stTxt: "Reported", link: "https://github.com/dermesser/integer-encoding-rs/issues/47", linkTxt: "integer-encoding#47 (case 1; case 2 pending)" },
+  { crate: "slab", what: "get2_mut panics on an out-of-bounds key; rustdoc promises None", site: "lib.rs:796/800", kind: "① Code bug",
+    st: "reported", stTxt: "Reported", link: "https://github.com/tokio-rs/slab/issues/168", linkTxt: "tokio-rs/slab#168" },
+  { crate: "base64", what: "add_padding doc “at least 2” insufficient — withdrawn: all call sites safe", site: "encode.rs:133/136-146", kind: "FP",
+    st: "fp", stTxt: "FP withdrawn", link: "https://github.com/marshallpierce/rust-base64/pull/317", linkTxt: "rust-base64#317 (closed)" },
+  { crate: "humantime", what: "add_current carry off-by-one: out-of-range input panics instead of Err(NumberOverflow)", site: "duration.rs:296", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/chronotope/humantime/pull/73", linkTxt: "chronotope/humantime#73" },
+  { crate: "glob", what: "panics on a non-UTF-8 filename under require_literal_leading_dot", site: "lib.rs:964", kind: "① Code bug",
+    st: "known", stTxt: "Fix PR exists", link: "https://github.com/rust-lang/glob/pull/162", linkTxt: "glob#162" },
+  { crate: "hex", what: "InvalidStringLength doc has the length condition reversed (hex_len*2==N vs hex_len==2N)", site: "error.rs:12-18", kind: "② Docs",
+    st: "known", stTxt: "Fix PR exists", link: "https://github.com/KokaKiwi/rust-hex/pull/99", linkTxt: "rust-hex#99" },
+  { crate: "humantime", what: "empty fraction “.Z” accepted; duplicate of upstream PR #75", site: "date.rs:169/184-186", kind: "② Docs",
+    st: "known", stTxt: "Fix PR exists", link: "https://github.com/chronotope/humantime/pull/75", linkTxt: "humantime#75" },
+  { crate: "byteorder", what: "read_{uint,int,uint128,int128} panic on out-of-range nbytes; # Errors only", site: "io.rs:429/454/462/470", kind: "①/②",
+    st: "known", stTxt: "Reported (Kani)", link: "https://github.com/BurntSushi/byteorder/issues/224", linkTxt: "byteorder#224" },
+  { crate: "byteorder", what: "write_int silently truncates: write_int(100000, 2) → -31072", site: "lib.rs:1938", kind: "② Docs",
+    st: "known", stTxt: "Reported by others", link: "https://github.com/BurntSushi/byteorder/issues/205", linkTxt: "byteorder#205" },
+  { crate: "humantime", what: "format_rfc3339 panics on pre-epoch SystemTime", site: "date.rs:263-264", kind: "① Code bug",
+    st: "known", stTxt: "Reported by others", link: "https://github.com/chronotope/humantime/issues/76", linkTxt: "humantime#76" },
+  { crate: "num-integer", what: "gcd wraps negative in release (MIN case), violating the non-negative invariant", site: "lib.rs:497-514", kind: "② Weak",
+    st: "known", stTxt: "Reported by others", link: "https://github.com/rust-num/num-integer/issues/55", linkTxt: "num-integer#55" },
+  { crate: "percent-encoding", what: "AsciiSet::add/remove/contains index out of bounds for byte ≥ 0x80; undocumented", site: "ascii_set.rs:47/58/64", kind: "① Code bug",
+    st: "known", stTxt: "Reported by others", link: "https://github.com/servo/rust-url/issues/1132", linkTxt: "rust-url#1132" },
+  { crate: "unicode-segmentation", what: "SentenceBreaks::size_hint never shrinks on consumption (violates the std contract)", site: "sentence.rs:177-181", kind: "① Code bug",
+    st: "known", stTxt: "Reported by others", link: "https://github.com/unicode-rs/unicode-segmentation/issues/182", linkTxt: "unicode-segmentation#182" },
+];
+const STATUS_ICON = { fixed: "✓", reported: "↗", known: "●", fp: "✕" };
+const STATUS_CLS  = { fixed: "c-fixed", reported: "c-reported", known: "c-known", fp: "c-fp" };
+
+/* ---- crate name → upstream repo (every crate name on the page is a hyperlink) ---- */
+const CRATE_REPO = {
+  glob: "rust-lang/glob",
+  byteorder: "BurntSushi/byteorder",
+  slab: "tokio-rs/slab",
+  "generational-arena": "fitzgen/generational-arena",
+  humantime: "chronotope/humantime",
+  form_urlencoded: "servo/rust-url",
+  "num-integer": "rust-num/num-integer",
+  hex: "KokaKiwi/rust-hex",
+  strsim: "rapidfuzz/strsim-rs",
+  siphasher: "jedisct1/rust-siphash",
+  untrusted: "briansmith/untrusted",
+  "bit-vec": "contain-rs/bit-vec",
+  crc: "mrhooray/crc-rs",
+  base64: "marshallpierce/rust-base64",
+  base64ct: "RustCrypto/formats",
+  "data-encoding": "ia0/data-encoding",
+  "integer-encoding": "dermesser/integer-encoding-rs",
+  "percent-encoding": "servo/rust-url",
+  semver: "dtolnay/semver",
+  "unicode-segmentation": "unicode-rs/unicode-segmentation",
+  bitflags: "bitflags/bitflags",
+};
+const CRATE_URL = Object.fromEntries(Object.entries(CRATE_REPO).map(([k, v]) => [k, `https://github.com/${v}`]));
+/* for the HTML tables */
+function crateLinkHTML(name) { return `<a href="${CRATE_URL[name]}" target="_blank" rel="noopener">${name}</a>`; }
+
+/* ---- KPI tiles ---- */
+(function tiles() {
+  const el = document.getElementById("tiles");
+  const items = [
+    { label: "Crates verified", value: "21" },
+    { label: "Verified code", value: "9,656 LoC" },
+    { label: "Translation coverage", value: "35.6%", sub: "all-line total across 21 crates" },
+    { label: "Registered findings", value: "18", sub: "continued-batch additions included" },
+  ];
+  for (const t of items) {
+    const d = document.createElement("div"); d.className = "tile";
+    const l = document.createElement("div"); l.className = "label"; l.textContent = t.label;
+    const v = document.createElement("div"); v.className = "value"; v.textContent = t.value;
+    d.append(l, v);
+    if (t.sub) { const s = document.createElement("div"); s.className = "sub"; s.textContent = t.sub; d.append(s); }
+    el.appendChild(d);
+  }
+})();
+
+/* ---- tooltip ---- */
+const tipEl = document.getElementById("tooltip");
+function showTip(html_build, x, y) {
+  tipEl.replaceChildren();
+  html_build(tipEl);
+  tipEl.style.display = "block";
+  const r = tipEl.getBoundingClientRect();
+  tipEl.style.left = Math.min(x + 12, window.innerWidth - r.width - 8) + "px";
+  tipEl.style.top  = Math.max(8, y - r.height - 10) + "px";
+}
+function tipRow(container, key, name, value) {
+  const row = document.createElement("div"); row.className = "row";
+  const k = document.createElement("span"); k.className = "key"; k.style.background = key;
+  const t = document.createElement("span"); t.className = "k"; t.textContent = name;
+  const v = document.createElement("span"); v.className = "v"; v.textContent = value;
+  row.append(k, t, v); container.appendChild(row);
+}
+function hideTip() { tipEl.style.display = "none"; }
+function bindTip(target, build) {
+  target.addEventListener("pointermove", e => showTip(build, e.clientX, e.clientY));
+  target.addEventListener("pointerleave", hideTip);
+  target.addEventListener("blur", hideTip);
+  target.addEventListener("focus", e => {
+    const r = target.getBoundingClientRect();
+    showTip(build, r.left + r.width / 2, r.top);
+  });
+}
+
+/* ---- Chart 1: composition stacked bars ---- */
+(function comp() {
+  const svg = document.getElementById("svg-comp");
+  const W = 760, rowH = 34, topPad = 6, left = 128, right = 64;
+  const order = ["exec", "spec", "proof", "trusted"];
+  const maxTotal = Math.max(...CRATES.map(c => c.exec + c.spec + c.proof + c.trusted));
+  const bandW = W - left - right;
+  const scale = v => v / maxTotal * bandW;
+  const H = topPad + CRATES.length * rowH + 14;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const NS = "http://www.w3.org/2000/svg";
+  const mk = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+
+  CRATES.forEach((c, i) => {
+    const y = topPad + i * rowH;
+    const total = c.exec + c.spec + c.proof + c.trusted;
+    const cat = mk("text", { x: left - 10, y: y + 17, "text-anchor": "end", class: "cat" });
+    cat.textContent = c.crate; svg.appendChild(cat);
+    // hit band
+    const band = mk("rect", { x: 0, y: y + 2, width: W, height: rowH - 6, fill: "transparent", class: "band", tabindex: "0",
+      role: "img", "aria-label": `${c.crate}: exec ${c.exec} LoC, spec ${c.spec} LoC, proof ${c.proof} LoC, trusted ${c.trusted} LoC` });
+    svg.appendChild(band);
+    let cum = 0, drewSeg = 0;
+    order.forEach((k, ki) => {
+      const v = c[k]; if (v === 0) return;
+      const x = left + scale(cum) + drewSeg * 2, w = scale(v);
+      const last = ki === order.length - 1 || !(c[order[ki + 1]]);
+      let n;
+      if (last && w > 4) { // rounded 4px cap on the right end of the bar
+        const r = 4, x2 = x + w, y1 = y + 4, y2 = y + 22;
+        n = mk("path", { fill: S[k].css, class: "seg", d:
+          `M${x},${y1} L${x2 - r},${y1} Q${x2},${y1} ${x2},${y1 + r} L${x2},${y2 - r} Q${x2},${y2} ${x2 - r},${y2} L${x},${y2} Z` });
+      } else {
+        n = mk("rect", { x, y: y + 4, width: w, height: 18, fill: S[k].css, class: "seg" });
+      }
+      n.setAttribute("tabindex", "0");
+      n.setAttribute("role", "img");
+      n.setAttribute("aria-label", `${c.crate} ${S[k].name} ${v} LoC`);
+      svg.appendChild(n);
+      const build = box => {
+        const h = document.createElement("div"); h.className = "v"; h.textContent = c.crate;
+        box.appendChild(h);
+        tipRow(box, S[k].css, S[k].name, `${v} LoC`);
+        const note = document.createElement("div"); note.className = "k";
+        note.textContent = `Code total ${total} · comments ${c.comment} · harness exec ${c.hExec}`;
+        box.appendChild(note);
+      };
+      n.addEventListener("pointerenter", () => { n.classList.add("hot"); });
+      n.addEventListener("pointerleave", () => { n.classList.remove("hot"); });
+      bindTip(n, build);
+      cum += v; drewSeg++;
+    });
+    // total labeled just outside the bar end
+    const lab = mk("text", { x: left + scale(total) + drewSeg * 2 + 6, y: y + 17, class: "vlab" });
+    lab.textContent = total; svg.appendChild(lab);
+  });
+  // baseline + ticks
+  svg.appendChild(mk("line", { x1: left, y1: topPad, x2: left, y2: H - 12, class: "axis" }));
+  [0, 500, 1000, 1500, 2000, 2500, 3000, 3500].filter(t => t <= maxTotal).forEach(t => {
+    const gx = left + scale(t);
+    svg.appendChild(mk("line", { x1: gx, y1: topPad, x2: gx, y2: H - 12, class: "gridline" }));
+    const tx = mk("text", { x: gx, y: H - 2, "text-anchor": "middle", class: "tick" }); tx.textContent = t; svg.appendChild(tx);
+  });
+
+  // legend (kept in a fixed order)
+  const lg = document.getElementById("legend-comp");
+  for (const k of order) {
+    const it = document.createElement("span"); it.className = "it";
+    const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = S[k].css;
+    const tt = document.createElement("span");
+    tt.textContent = `${S[k].name} — ${T[k]} LoC`;
+    it.append(sw, tt); lg.appendChild(it);
+  }
+  // table view
+  const tbl = document.getElementById("tbl-comp");
+  const table = document.createElement("table");
+  table.innerHTML = `<thead><tr><th>crate</th><th class="num">exec</th><th class="num">spec</th><th class="num">proof</th><th class="num">trusted</th><th class="num">comments</th><th class="num">harness exec</th><th>Verification results (v = verified / e = expected obligation anchors)</th></tr></thead>`;
+  const tb = document.createElement("tbody");
+  for (const c of CRATES) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${crateLinkHTML(c.crate)}</td><td class="num">${c.exec}</td><td class="num">${c.spec}</td><td class="num">${c.proof}</td><td class="num">${c.trusted}</td><td class="num">${c.comment}</td><td class="num">${c.hExec}</td><td>${c.res}</td>`;
+    tb.appendChild(tr);
+  }
+  const trT = document.createElement("tr");
+  trT.innerHTML = `<td><b>Total</b></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.spec}</b></td><td class="num"><b>${T.proof}</b></td><td class="num"><b>${T.trusted}</b></td><td class="num"><b>${T.comment}</b></td><td class="num"><b>${T.hExec}</b></td><td>Coverage ${T.cov}% (all-line total across 21 crates)</td>`;
+  tb.appendChild(trT);
+  table.appendChild(tb); tbl.appendChild(table);
+})();
+
+/* ---- Chart 2: coverage ---- */
+(function cov() {
+  const svg = document.getElementById("svg-cov");
+  const W = 760, rowH = 32, topPad = 6, left = 128, right = 96;
+  const bandW = W - left - right;
+  const H = topPad + CRATES.length * rowH + 14;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const NS = "http://www.w3.org/2000/svg";
+  const mk = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+  CRATES.forEach((c, i) => {
+    const y = topPad + i * rowH;
+    const cat = mk("text", { x: left - 10, y: y + 16, "text-anchor": "end", class: "cat" }); cat.textContent = c.crate; svg.appendChild(cat);
+    const pct = c.cap100 ? 100 : c.cov;
+    const w = bandW * pct / 100;
+    const r = 4, x2 = left + w, y1 = y + 3, y2 = y + 21;
+    const bar = mk("path", { fill: "var(--cov-bar)", class: "seg", d:
+      `M${left},${y1} L${x2 - r},${y1} Q${x2},${y1} ${x2},${y1 + r} L${x2},${y2 - r} Q${x2},${y2} ${x2 - r},${y2} L${left},${y2} Z`,
+      tabindex: "0", role: "img",
+      "aria-label": c.cap100 ? `${c.crate}: coverage above 100%, shown capped at 100 (actual ratio ${c.cov.toFixed(1)}%)` : `${c.crate}: coverage ${c.cov}%` });
+    svg.appendChild(bar);
+    const lab = mk("text", { x: x2 + 6, y: y + 16, class: "vlab" });
+    lab.textContent = c.cap100 ? "100%‡" : `${c.cov.toFixed(1)}%`; svg.appendChild(lab);
+    const build = box => {
+      const h = document.createElement("div"); h.className = "v";
+      h.textContent = c.cap100 ? `100%‡ (actual ratio ${c.cov.toFixed(1)}%)` : `${c.cov.toFixed(1)}%`;
+      const note = document.createElement("div"); note.className = "k";
+      note.textContent = `${c.crate} · translated exec ${c.exec} / upstream exec ${c.up} LoC`;
+      box.append(h, note);
+    };
+    bar.addEventListener("pointerenter", () => bar.classList.add("hot"));
+    bar.addEventListener("pointerleave", () => bar.classList.remove("hot"));
+    bindTip(bar, build);
+  });
+  [0, 25, 50, 75, 100].forEach(t => {
+    const gx = left + bandW * t / 100;
+    svg.appendChild(mk("line", { x1: gx, y1: topPad, x2: gx, y2: H - 12, class: "gridline" }));
+    const tx = mk("text", { x: gx, y: H - 2, "text-anchor": "middle", class: "tick" }); tx.textContent = t + "%"; svg.appendChild(tx);
+  });
+  svg.appendChild(mk("line", { x1: left, y1: topPad, x2: left, y2: H - 12, class: "axis" }));
+
+  const tbl = document.getElementById("tbl-cov");
+  const table = document.createElement("table");
+  table.innerHTML = `<thead><tr><th>crate</th><th>version</th><th>pin</th><th class="num">translated exec</th><th class="num">upstream exec</th><th class="num">coverage</th><th>remarks</th><th>Obligation anchors (expected errors)</th></tr></thead>`;
+  const tb = document.createElement("tbody");
+  for (const c of CRATES) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${crateLinkHTML(c.crate)}</td><td>${c.ver}</td><td><a href="https://github.com/${CRATE_REPO[c.crate]}/commit/${c.sha}" target="_blank" rel="noopener"><code>${c.sha.slice(0, 7)}</code></a></td><td class="num">${c.exec}</td><td class="num">${c.up}</td><td class="num">${c.cap100 ? "100%‡" : c.cov.toFixed(1) + "%"}</td><td>${c.cap100 ? "upstream mirrored in full + newly added exec, ratios &gt; 100% shown capped" : "denominator includes upstream inline UTs"}</td><td>${c.anchor}</td>`;
+    tb.appendChild(tr);
+  }
+  const trT = document.createElement("tr");
+  trT.innerHTML = `<td><b>Total (21 crates)</b></td><td></td><td></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.up}</b></td><td class="num"><b>${T.cov}%</b></td><td>—</td><td>—</td>`;
+  tb.appendChild(trT);
+  table.appendChild(tb); tbl.appendChild(table);
+})();
+
+/* ---- findings table ---- */
+(function findings() {
+  const host = document.getElementById("findings");
+  const table = document.createElement("table");
+  table.className = "findings";
+  table.innerHTML = `<thead><tr><th>#</th><th>crate</th><th>finding</th><th>site</th><th>attribution</th><th>status</th></tr></thead>`;
+  const tb = document.createElement("tbody");
+  FINDINGS.forEach((f, i) => {
+    const tr = document.createElement("tr");
+    const tdC = document.createElement("td"); tdC.innerHTML = crateLinkHTML(f.crate);
+    const tdW = document.createElement("td"); tdW.innerHTML = f.what;
+    const tdS = document.createElement("td"); const code = document.createElement("code"); code.textContent = f.site; tdS.appendChild(code);
+    const tdK = document.createElement("td"); const kd = document.createElement("span"); kd.className = "kind"; const kb = document.createElement("b"); kb.textContent = f.kind; kd.appendChild(kb); tdK.appendChild(kd);
+    const tdSt = document.createElement("td");
+    const chip = document.createElement("span"); chip.className = "chip " + STATUS_CLS[f.st];
+    const ic = document.createElement("i"); ic.className = "ic"; ic.textContent = STATUS_ICON[f.st];
+    const icColor = { fixed: "var(--good)", reported: "var(--reported)", known: "var(--known)", fp: "var(--fp)" }[f.st];
+    if (icColor) ic.style.color = icColor;
+    chip.appendChild(ic);
+    chip.appendChild(document.createTextNode(" " + f.stTxt));
+    tdSt.appendChild(chip);
+    if (f.link) {
+      const a = document.createElement("a"); a.href = f.link; a.target = "_blank"; a.rel = "noopener";
+      a.textContent = f.linkTxt || f.link; a.style.marginLeft = "6px";
+      tdSt.appendChild(a);
+    }
+    const tds = [i + 1, tdC, tdW, tdS, tdK, tdSt].map(v => typeof v === "number" ? (() => { const t = document.createElement("td"); t.className = "num"; t.textContent = v; return t; })() : v);
+    tr.append(...tds);
+    tb.appendChild(tr);
+  });
+  table.appendChild(tb); host.appendChild(table);
+})();
+</script>
+</body>
+</html>
