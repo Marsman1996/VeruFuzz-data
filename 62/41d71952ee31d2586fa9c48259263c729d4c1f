@@ -1,0 +1,87 @@
+README.md
+  s_7f57d3a5de2d07::t_5c246667556941 34
+  s_7f57d3a5de2d07::t_a90ca736b0bb43 36
+  s_7f57d3a5de2d07::t_4fdd2e0585bbbd 6
+  s_7f57d3a5de2d07::t_5dc708664719c4 3-5
+  s_7f57d3a5de2d07::t_c68c69e39be240 7-9,31-33
+  s_7f57d3a5de2d07::t_cc3c12ba0b0737 35
+  s_7f57d3a5de2d07::t_28818f32630c3e 37-39
+.github/workflows/deploy-dashboard.yml
+  s_1718f766a90e4e::t_734afa5e005d98 1-37
+utils/dashboard.html
+  s_1718f766a90e4e::t_df4788daad6228 155
+  s_1718f766a90e4e::t_ac8e2c8030e7d4 425
+  s_1718f766a90e4e::t_00d0b0fc03d699 470
+  s_1718f766a90e4e::t_72bfa9c1bf90b1 157
+  s_1718f766a90e4e::t_380dc5fffb8e58 240
+  s_1718f766a90e4e::t_f2d9145397faaa 264
+  s_1718f766a90e4e::t_38d10dfc6ba8c9 313
+  s_1718f766a90e4e::t_5fc80bfd648c7f 494
+  s_1718f766a90e4e::t_58d294067110d2 147
+  s_1718f766a90e4e::t_e65a779393f47e 439
+  s_1718f766a90e4e::t_10548ca209982c 322
+  s_1718f766a90e4e::t_01662f03da44dc 323
+  s_1718f766a90e4e::t_5797786f30acaf 312
+  s_1718f766a90e4e::t_734ea2728c5203 375
+  s_1718f766a90e4e::t_552036900784d0 397
+  s_1718f766a90e4e::t_5b436d6fcb63e0 314
+  s_1718f766a90e4e::t_5006cc5cc17ba2 250
+  s_1718f766a90e4e::t_f76d736f6aaddd 246
+  s_1718f766a90e4e::t_62ddfaf54f481a 392
+  s_1718f766a90e4e::t_1b2ab64e5f0136 2-146,148,150,165-235,245,249,251,255,277-305,315,355,383,399-419,428-431,444-468,486-490,499-515
+  s_1718f766a90e4e::t_7ec056641bd7f2 149
+  s_1718f766a90e4e::t_50b5408762664c 320-321
+  s_1718f766a90e4e::t_abf302d06de1b6 254
+  s_1718f766a90e4e::t_6eecf766dce412 241-244,247-248,252-253,256-263,265-275
+  s_1718f766a90e4e::t_cf6179f6c91362 1
+  s_1718f766a90e4e::t_f5899193a293cf 151-154
+  s_1718f766a90e4e::t_04e049ab8703b1 156
+  s_1718f766a90e4e::t_f093243bd21019 158-160,162-164
+  s_1718f766a90e4e::t_43b1b14b388887 236-239
+  s_1718f766a90e4e::t_3348bb1f4ce69b 276
+  s_1718f766a90e4e::t_bd846cc81b30cc 306-311
+  s_1718f766a90e4e::t_b9d81d6fdd6ffd 316-319
+  s_1718f766a90e4e::t_dd392f3ac76761 324-326,352-354
+  s_1718f766a90e4e::t_d81460c09bf9f8 356-358,372-374
+  s_1718f766a90e4e::t_813af2e2aba686 376-378,380-382
+  s_1718f766a90e4e::t_3c14a1539cdf53 384-386,389-391
+  s_1718f766a90e4e::t_7355f24c4ffedd 393-396
+  s_1718f766a90e4e::t_84ae6c7527f810 398
+  s_1718f766a90e4e::t_3c098b207cf1d2 420-424
+  s_1718f766a90e4e::t_aa9f14d01efd2c 426-427
+  s_1718f766a90e4e::t_c805ef07a64062 432-434,436-438
+  s_1718f766a90e4e::t_6df89d336a337c 440-443
+  s_1718f766a90e4e::t_ee256db74ed84f 469
+  s_1718f766a90e4e::t_c51fd0fcbd5396 471-473,483-485
+  s_1718f766a90e4e::t_276ef0baa9db07 491-493
+  s_1718f766a90e4e::t_0afd13d161516b 495-498
+  s_1718f766a90e4e::t_fdd6023613f218 516-518
+fetch.sh
+  s_7f57d3a5de2d07::t_8e8b7d431f63dd 40
+  s_7f57d3a5de2d07::t_45626963779187 37-39
+  s_7f57d3a5de2d07::t_227cc045a7c067 41-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6241d71952ee31d2586fa9c48259263c729d4c1f",
+  "prompts": {},
+  "sessions": {
+    "s_1718f766a90e4e": {
+      "agent_id": {
+        "tool": "antcc",
+        "id": "c508bc88-51e8-433f-b787-66099d29555c",
+        "model": "antchat/GLM-5.3-Flash"
+      },
+      "human_author": "Marsman1996 <lqliuyuwei@outlook.com>"
+    },
+    "s_7f57d3a5de2d07": {
+      "agent_id": {
+        "tool": "antcc",
+        "id": "5e09663a-752f-4d73-b6c3-b102163295d2",
+        "model": "antchat/GLM-5.3"
+      },
+      "human_author": "Marsman1996 <lqliuyuwei@outlook.com>"
+    }
+  }
+}
