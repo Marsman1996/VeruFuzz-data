@@ -19,12 +19,17 @@
 //!       extend_keys_only (generic) exemplar (no direct upstream UT; property
 //!       anchor coverage_props P5-3; the exemplar takes non-empty keys).
 //!   UT-4 byte_serialize/size_hint exemplars (multi-run chunking + empty-string edge).
+//!   UT-5 the byte_serialize next unchanged-run unsafe face -- the two run
+//!       pieces of the UT-4 input go through the lib.rs:159
+//!       str::from_utf8_unchecked call (valid_utf8 discharged inside).
 //! Run: verus database/form_urlencoded/verified/harness/ut_ext.rs
 //! Reading: apart from the F1 expected error pulled in by the integral re-verification
 //! of the formlib module (src/lib.rs), everything else verifies.
 
 use vstd::prelude::*;
 use vstd::seq::Seq;
+#[allow(unused)]
+use vstd::string::*;
 
 #[path = "../src/lib.rs"]
 mod formlib;
@@ -242,6 +247,48 @@ pub exec fn ut_size_hint_empty() -> (hi: Option<usize>)
     let (lo, hi) = byte_serialize_size_hint(&bytes, 0);
     assert(lo == 0);
     hi
+}
+
+// ================= UT-5: the byte_serialize next unchanged-run unsafe face =================
+
+/// UT-4's input "ab c" exercises the unchanged-run branch twice (runs "ab" and
+/// "c"; the ' ' piece takes the lib.rs:142 static-str "+" branch instead):
+/// both run slices go through the str::from_utf8_unchecked call under the
+/// vstd spec (its valid_utf8 precondition is discharged inside the anchor,
+/// the formal reading of the in-source safety argument at lib.rs:155-158),
+/// and the returned &str contents are exactly the two runs.
+pub exec fn ut_utf8_run_pieces_ab_c() -> (r: (Vec<u8>, Vec<u8>))
+    ensures
+        r.0@ == seq![b'a', b'b'],
+        r.1@ == seq![b'c'],
+{
+    let mut bytes: Vec<u8> = Vec::new();
+    bytes.push(b'a');
+    bytes.push(b'b');
+    bytes.push(0x20);
+    bytes.push(b'c');
+    assert(bytes@ == seq![b'a', b'b', 0x20, b'c']);
+    proof {
+        // scan evaluation: from 1 the first non-unchanged byte is the 0x20 at 2;
+        // from 4 the run ends at len 4
+        reveal_with_fuel(scan_nonunchanged, 4);
+        assert(!unchanged(0x20));
+        assert(scan_nonunchanged(bytes@, 1) == 2);
+        assert(scan_nonunchanged(bytes@, 4) == 4);
+        assert(bytes@.subrange(0, 2) == seq![b'a', b'b']);
+        assert(bytes@.subrange(3, 4) == seq![b'c']);
+    }
+    let sl: &[u8] = &bytes;
+    let p0 = next_utf8_unchecked_run(sl, 0); // the run piece [0, 2) == "ab"
+    let p3 = next_utf8_unchecked_run(sl, 3); // the run piece [3, 4) == "c"
+    assert(p0.spec_bytes() =~= seq![b'a', b'b']);
+    assert(p3.spec_bytes() =~= seq![b'c']);
+    let mut r0: Vec<u8> = Vec::new();
+    r0.push(b'a');
+    r0.push(b'b');
+    let mut r1: Vec<u8> = Vec::new();
+    r1.push(b'c');
+    (r0, r1)
 }
 
 

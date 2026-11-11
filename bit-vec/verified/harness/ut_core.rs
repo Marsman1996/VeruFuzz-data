@@ -19,8 +19,15 @@
 //!   - L0 "invariant preserved after op" of the fuzz interpreter
 //!     (code/fuzz main.rs do_test: fill op13/22, push op4, pop op5)
 //!     -> fuzz_inv_preserved_by_fill / _by_push / _by_pop
-//!   The remaining UT families (serde/set ops/Ord/count/insert/remove,
-//!   etc.) are uncovered; see out/bug-finder-summary.md.
+//!   - the batch-D residual zone upstream UT families (display output,
+//!     from_bools, truncate faces, remove_last, remove_all)
+//!     -> ut_display_output / ut_from_bools_display / ut_truncate_faces /
+//!        ut_remove_last / ut_remove_all_clone
+//!   The remaining UT families (serde cfg; set ops/count/insert/remove
+//!   are covered by the diff-set harnesses; iter_mut/get_mut are
+//!   Rc-blocked) -- see out/bug-finder-summary.md.
+
+#![feature(allocator_api)] // needed by the referenced src assume_specification signature
 
 #[allow(unused_imports)]
 use vstd::prelude::*;
@@ -238,6 +245,127 @@ pub exec fn fuzz_inv_preserved_by_pop(n: usize, b: bool) -> (n1: usize)
     /* Origin Rust: op5 pop */
     let r = bv.pop();
     bv.nbits
+}
+
+// ---------------------------------------------------------------------------
+// the batch-D residual zone: the upstream UT families that were absent
+// above (Phase-transcribed assertion theorems over the batch-D faces;
+// out/harness-inventory.md 6.2 for the full residual table)
+
+/// test_display_output (lib.rs:2394-2400): the three rustdoc shapes --
+/// empty prints nothing, a one-bit true prints "1", eight zeros print
+/// "00000000" (the char-stream materialization of Display)
+pub exec fn ut_display_output() -> (r: u32)
+    ensures
+        r == 1,
+{
+    let e = bitvec_lib::new();
+    let ce = e.display_chars();
+    assert(ce@.len() == 0);
+    let one = BitVec::from_elem(1, true);
+    let c1 = one.display_chars();
+    assert(c1@.len() == 1);
+    assert(c1@[0] == '1');
+    let z8 = BitVec::from_elem(8, false);
+    let cz = z8.display_chars();
+    assert(cz@.len() == 8);
+    assert(cz@[0] == '0');
+    assert(cz@[3] == '0');
+    assert(cz@[7] == '0');
+    assert forall|j: usize| j < 8 implies
+        cz@[j as int] == '0' by {
+        assert forall|k: usize| k < 8 implies
+            bit_at(z8.storage@, z8.nbits, k) == false by { }
+    }
+    1
+}
+
+/// test_from_bools (lib.rs:2816-2822): the collect of [true, false,
+/// true, true] reads back "1011" (FromIterator + the Display stream)
+pub exec fn ut_from_bools_display() -> (r: u32)
+    ensures
+        r == 4,
+{
+    let bools: &[bool] = &[true, false, true, true];
+    let bv = BitVec::from_iter_bools(bools);
+    let cs = bv.display_chars();
+    assert(cs@.len() == 4);
+    assert(cs@[0] == '1');
+    assert(cs@[1] == '0');
+    assert(cs@[2] == '1');
+    assert(cs@[3] == '1');
+    // the eq_vec tier rides along on the collected bits
+    assert(bit_at(bv.storage@, bv.nbits, 1) == bools@[1]);
+    assert(bit_at(bv.storage@, bv.nbits, 0) == bools@[0]);
+    assert(bit_at(bv.storage@, bv.nbits, 2) == bools@[2]);
+    assert(bit_at(bv.storage@, bv.nbits, 3) == bools@[3]);
+    4
+}
+
+/// test_bit_vec_truncate (lib.rs:3075-3095): the five faces of the
+/// truncation walk -- block-edge, the above-length noop, the
+/// mid-block cut, and the emptying cut
+pub exec fn ut_truncate_faces() -> (r: u32)
+    ensures
+        r == 0,
+{
+    let mut s = BitVec::from_elem(160, true);
+    assert(s.nbits == 160);
+    s.truncate(128);
+    assert(s.nbits == 128);
+    assert forall|j: usize| j < 128 implies
+        bit_at(s.storage@, s.nbits, j) == true by { }
+    // the above-length call is the documented noop
+    s.truncate(160);
+    assert(s.nbits == 128);
+    // the mid-block cut
+    s.truncate(86);
+    assert(s.nbits == 86);
+    assert forall|j: usize| j < 86 implies
+        bit_at(s.storage@, s.nbits, j) == true by { }
+    // the emptying cut
+    s.truncate(0);
+    assert(s.nbits == 0);
+    0
+}
+
+/// test_remove_last (lib.rs:3662-3669): a from_fn build in upstream --
+/// the materialization keeps the assertion shape (the top bit set, then
+/// removed) with the from_elem+set construction (from_fn's closure
+/// domain stays blocked)
+pub exec fn ut_remove_last() -> (r: bool)
+    ensures
+        r == true,
+{
+    let mut v = BitVec::from_elem(1025, false);
+    v.set(1024, true);
+    assert(v.nbits == 1025);
+    let tail = v.remove(1024);
+    assert(tail == true);
+    assert(v.nbits == 1024);
+    let st = v.storage();
+    assert(st.len() == (1024usize / 32));
+    // the kept bits read back false
+    assert forall|j: usize| j < 1024 implies
+        bit_at(v.storage@, v.nbits, j) == false by { }
+    true
+}
+
+/// test_remove_all (lib.rs:3671-3680): the clone clears to emptiness
+pub exec fn ut_remove_all_clone() -> (r: u32)
+    ensures
+        r == 0,
+{
+    let v = BitVec::from_elem(64, false);
+    let mut v2 = v.clone_exec();
+    v2.remove_all();
+    assert(v2.nbits == 0);
+    let g = v2.get(0);
+    assert(g is None);
+    // the length and the storage view are both empty
+    let st2 = v2.storage();
+    assert(st2.len() == 0);
+    0
 }
 
 fn main() {}

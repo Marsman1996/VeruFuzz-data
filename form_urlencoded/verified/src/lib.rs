@@ -16,6 +16,11 @@
 //!   extend_pairs/extend_keys_only, finish (+ the string guard),
 //!   Parse::into_owned/ParseIntoOwned, the byte_serialize structure model and
 //!   size_hint.
+//! Section G (residual batch, 2026-11-08): the discharge of the library's only
+//!   `unsafe` (ByteSerialize::next, lib.rs:159 str::from_utf8_unchecked) via
+//!   vstd's own UTF-8 model -- the position-scan spec of lib.rs:148 and the
+//!   unchanged-checked slice => valid_utf8 chain, with the actual std call
+//!   as the live obligation anchor.
 //!
 //! Migration note (matches!/splitn/Cow/iterators are all unsupported by Verus;
 //!   every executable change keeps its original in an Origin Rust note);
@@ -26,6 +31,10 @@
 
 use vstd::prelude::*;
 use vstd::seq::Seq;
+#[allow(unused)]
+use vstd::string::*;
+#[allow(unused)]
+use vstd::utf8::*;
 
 verus! {
 
@@ -1103,6 +1112,171 @@ proof fn f1_reachability_witness() {
     let start_position: int = 1;
     assert(true); // documented-side: vacuously satisfied (empty suffix)
     assert(target_len < start_position); // branch condition true => panic reachable
+}
+
+// ================= Section G: the unsafe-discharge residual batch
+// (2026-11-08) =================
+// The single `unsafe` of the library lives in ByteSerialize::next, lib.rs:159
+//   Some(unsafe { str::from_utf8_unchecked(unchanged_slice) })
+// with the in-source safety argument (lib.rs:155-157): "This unsafe is
+// appropriate because we have already checked these bytes in
+// byte_serialized_unchanged, which checks for a subset of UTF-8. So we know
+// these bytes are valid UTF-8, and doing another UTF-8 check would be wasteful."
+// This section discharges that argument against vstd's own UTF-8 model: the
+// std call is reached through the assume_specification re-declared below. It
+// repeats vstd's own spec verbatim (vstd string.rs:169-174, requires
+// valid_utf8(v@), ensures res.spec_bytes() =~= v@): the prebuilt vstd of this
+// verus build registers its spec under a `str::` path key, while this
+// toolchain resolves the call def-id as core::str::converts::from_utf8_unchecked,
+// so the re-declaration is required merely to make vstd's own spec resolve;
+// the declared requires is thereby a live obligation at the call below
+// (measured: an unsatisfied valid_utf8 premise fails the call).
+
+pub assume_specification[std::str::from_utf8_unchecked](v: &[u8]) -> (res: &str)
+    requires
+        valid_utf8(v@),
+    ensures
+        res.spec_bytes() =~= v@,
+;
+
+/// Origin Rust: tail.iter().position(|&b| !byte_serialized_unchanged(b))
+/// (lib.rs:148; tail = the bytes after the head): the first index at or after i
+/// whose byte is *not* unchanged, or len() when every byte in [i, len) is
+/// unchanged. (Minimal pub adjustment: the harness-side UT-5 exemplars assert
+/// on the pieces this scan carves; relaxing the visibility changes no
+/// verification semantics, as with the skip lemmas above.)
+pub open spec fn scan_nonunchanged(s: Seq<u8>, i: int) -> int
+    decreases s.len() - i
+{
+    if i >= s.len() || !unchanged(s[i]) { i } else { scan_nonunchanged(s, i + 1) }
+}
+
+/// Position-semantics, one step: an unchanged byte at i does not move the
+/// boundary (position() skips over it).
+proof fn scan_step(s: Seq<u8>, i: int)
+    requires
+        0 <= i < s.len(),
+        unchanged(s[i]),
+    ensures
+        scan_nonunchanged(s, i) == scan_nonunchanged(s, i + 1),
+{
+    reveal_with_fuel(scan_nonunchanged, 1);
+}
+
+/// Position-semantics, terminal: at a non-unchanged byte (or the end) the
+/// boundary is the index itself.
+proof fn scan_terminal(s: Seq<u8>, i: int)
+    requires
+        0 <= i <= s.len(),
+        i == s.len() || !unchanged(s[i]),
+    ensures
+        i <= scan_nonunchanged(s, i) <= s.len(),
+        scan_nonunchanged(s, i) == i,
+{
+    reveal_with_fuel(scan_nonunchanged, 1);
+}
+
+/// Position() returns the FIRST non-unchanged index: every byte at or after i
+/// and strictly before the boundary was passed over by the scan, i.e. checked
+/// unchanged -- exactly the premise the in-source safety remark relies on.
+proof fn scan_all_before_unchanged(s: Seq<u8>, i: int)
+    requires
+        0 <= i <= s.len(),
+    ensures
+        i <= scan_nonunchanged(s, i) <= s.len(),
+        forall|j: int| i <= j < scan_nonunchanged(s, i) ==> #[trigger] unchanged(s[j]),
+    decreases s.len() - i,
+{
+    reveal_with_fuel(scan_nonunchanged, 1);
+    if i < s.len() && unchanged(s[i]) {
+        scan_all_before_unchanged(s, i + 1);
+    }
+}
+
+/// The "checks for a subset of UTF-8" half of the safety remark: every
+/// unchanged byte is an ASCII (width-1 leading) byte.
+proof fn unchanged_ascii_lead(b: u8)
+    ensures
+        unchanged(b) ==> is_leading_byte_width_1(b),
+{ }
+
+/// The full safety argument (lib.rs:155-158): a slice whose every byte was
+/// checked unchanged is valid UTF-8. Width-1 leading bytes only => each scalar
+/// consumes exactly one byte => the vstd ascii-block prefix extension walks
+/// the whole slice.
+pub proof fn unchanged_slice_valid_utf8(s: Seq<u8>, a: int, b: int)
+    requires
+        0 <= a <= b <= s.len(),
+        forall|j: int| a <= j < b ==> #[trigger] unchanged(s[j]),
+    ensures
+        #![trigger valid_utf8(s.subrange(a, b))]
+        valid_utf8(s.subrange(a, b)),
+{
+    let q = s.subrange(a, b);
+    assert forall|k: int| 0 <= k < q.len() implies #[trigger] is_leading_byte_width_1(q[k]) by {
+        // q.len() == b - a, so 0 <= k < b - a gives a <= a + k < b
+        vstd::seq::lemma_seq_subrange_len(s, a, b);
+        assert(q.len() == b - a);
+        // q[k] == s[a + k] (vstd subrange-index lemma), and s[a + k] was checked unchanged
+        vstd::seq::lemma_seq_subrange_index(s, a, b, k);
+        assert(q[k] == s[a + k]);
+        assert(unchanged(s[a + k]));
+        unchanged_ascii_lead(s[a + k]);
+    }
+    assert(valid_utf8(q.subrange(0, 0)));
+    partial_valid_utf8_extend_ascii_block(q, 0, q.len() as int);
+    assert(q.subrange(0, q.len() as int) =~= q);
+}
+
+/// Origin Rust: the unchanged-run branch of ByteSerialize::next
+/// (lib.rs:148-159):
+///     let position = tail.iter().position(|&b| !byte_serialized_unchanged(b));
+///     let (unchanged_slice, remaining) = match position {
+///         Some(i) => self.bytes.split_at(1 + i),
+///         None => (self.bytes, &[][..]),
+///     };
+///     self.bytes = remaining;
+///     Some(unsafe { str::from_utf8_unchecked(unchanged_slice) })
+/// Carrier: the iterator state's self.bytes cursor is the (bytes, position)
+/// pair; the branch's premise is the unchanged head requires below
+/// (lib.rs:140); the str::from_utf8_unchecked is the actual std call under
+/// the assume_specification above, so its `requires valid_utf8` is the live
+/// obligation this fn must discharge -- the formal reading of the safety
+/// remark (the only guarantee the checked-unchanged premise actually buys).
+/// (Minimal pub adjustment as with the skip lemmas: the UT-5 exemplar calls
+/// this anchor by name.)
+pub exec fn next_utf8_unchecked_run(bytes: &[u8], position: usize) -> (r: &str)
+    requires
+        position < bytes.len(),
+        unchanged(bytes@[position as int]), // lib.rs:140: the head was checked unchanged
+    ensures
+        r.spec_bytes() =~= bytes@.subrange(position as int,
+            scan_nonunchanged(bytes@, position as int + 1)),
+{
+    // Origin Rust: tail.iter().position(...)(lib.rs:148) -- the exec scan
+    let mut i: usize = position + 1;
+    while i < bytes.len() && byte_serialized_unchanged(bytes[i])
+        invariant
+            position < i <= bytes.len(),
+            forall|j: int| position < j < i ==> #[trigger] unchanged(bytes[j]),
+            scan_nonunchanged(bytes@, position as int + 1) == scan_nonunchanged(bytes@, i as int),
+        decreases bytes.len() - i,
+    {
+        proof { scan_step(bytes@, i as int); }
+        i = i + 1;
+    }
+    // Origin Rust: match position { Some(i) => self.bytes.split_at(1 + i),
+    //     None => (self.bytes, &[][..]) }(lib.rs:149-153; the None case is the
+    // scan reaching len: the slice is the whole remaining run)
+    let unchanged_slice: &[u8] = &bytes[position..i];
+    proof {
+        scan_terminal(bytes@, i as int);
+        assert(unchanged(bytes@[position as int]));
+        unchanged_slice_valid_utf8(bytes@, position as int, i as int);
+        assert(unchanged_slice@ == bytes@.subrange(position as int, i as int));
+    }
+    // Origin Rust: Some(unsafe { str::from_utf8_unchecked(unchanged_slice) })(lib.rs:159)
+    unsafe { std::str::from_utf8_unchecked(unchanged_slice) }
 }
 }
 

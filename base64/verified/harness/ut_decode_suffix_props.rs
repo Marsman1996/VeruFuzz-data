@@ -47,7 +47,7 @@ pub exec fn case_two_symbols_valid(
         out@.len() >= 1,
         out@.len() <= usize::MAX - 4,
 {
-    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical);
+    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical, Ghost(false));
     match r {
         Result::Ok(md) => (md.decoded_len == 1) && (out[0] == (0 * 4 + 16 / 16) as u8),
         Result::Err(_) => false,
@@ -74,7 +74,7 @@ pub exec fn case_two_symbols_short_pad(
         out@.len() >= 1,
         out@.len() <= usize::MAX - 4,
 {
-    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical);
+    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical, Ghost(false));
     r == Result::Err(DecodeSliceError::DecodeError(DecodeError::InvalidByte(2, 61)))
 }
 
@@ -97,7 +97,7 @@ pub exec fn case_pad_too_early(
         out@.len() >= 1,
         out@.len() <= usize::MAX - 4,
 {
-    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical);
+    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical, Ghost(false));
     r == Result::Err(DecodeSliceError::DecodeError(DecodeError::InvalidByte(1, 61)))
 }
 
@@ -121,7 +121,7 @@ pub exec fn case_invalid_last_symbol(
         out@.len() >= 1,
         out@.len() <= usize::MAX - 4,
 {
-    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical);
+    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical, Ghost(false));
     r == Result::Err(DecodeSliceError::DecodeError(DecodeError::InvalidLastSymbol {
         offset: 1,
         symbol: 66,
@@ -149,7 +149,7 @@ pub exec fn case_trailing_bits_allowed(
         out@.len() >= 1,
         out@.len() <= usize::MAX - 4,
 {
-    let r = decode_suffix(s, 0, out, 0, t, true, 61, DecodePaddingMode::RequireCanonical);
+    let r = decode_suffix(s, 0, out, 0, t, true, 61, DecodePaddingMode::RequireCanonical, Ghost(false));
     match r {
         Result::Ok(md) => (md.decoded_len == 1) && (out[0] == (0 * 4 + 1 / 16) as u8),
         Result::Err(_) => false,
@@ -176,7 +176,7 @@ pub exec fn case_require_none_rejects(
         out@.len() >= 1,
         out@.len() <= usize::MAX - 4,
 {
-    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireNone);
+    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireNone, Ghost(false));
     r == Result::Err(DecodeSliceError::DecodeError(DecodeError::InvalidPadding))
 }
 
@@ -196,7 +196,7 @@ pub exec fn case_lone_symbol_invalid_length(
         out@.len() >= 1,
         out@.len() <= usize::MAX - 4,
 {
-    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical);
+    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::RequireCanonical, Ghost(false));
     r == Result::Err(DecodeSliceError::DecodeError(DecodeError::InvalidLength(1)))
 }
 
@@ -219,7 +219,7 @@ pub exec fn case_output_too_small(
         t@[66 as int] == 16, /* the spec value of 'Q': canonical, value 16 (low 4 bits of <<4 zero) */
         out@.len() == 0,
 {
-    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::Indifferent);
+    let r = decode_suffix(s, 0, out, 0, t, false, 61, DecodePaddingMode::Indifferent, Ghost(false));
     r == Result::Err(DecodeSliceError::OutputSliceTooSmall)
 }
 

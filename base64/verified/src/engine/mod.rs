@@ -7,6 +7,11 @@
 
 use vstd::prelude::*;
 
+/* Module order matters for the per-panel verification cost: naive is declared
+   first so its obligations are checked before the general_purpose scan-algebra
+   items join the shared SMT context (the reverse order flips naive_internal_decode
+   far over the default budget; see the execution ledger). */
+pub mod naive;
 pub mod general_purpose;
 
 verus! {

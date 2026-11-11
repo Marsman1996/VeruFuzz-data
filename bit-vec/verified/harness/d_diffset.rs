@@ -16,6 +16,8 @@
 //! Machine evaluation of literal bit states goes through the single-bit
 //! lit_* bridges (spec-domain shifts are uninterpreted).
 
+#![feature(allocator_api)] // needed by the referenced src assume_specification signature
+
 #[allow(unused_imports)]
 use vstd::prelude::*;
 

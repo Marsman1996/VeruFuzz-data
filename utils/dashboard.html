@@ -129,7 +129,7 @@
 <div class="wrap">
   <header>
     <h1>VeruFuzz · Verus verification progress</h1>
-    <p class="meta">Updated 2026-11-03 (initial version 2026-10-29) · verus 0.2026.10.26</p>
+    <p class="meta">Updated 2026-11-11 (initial version 2026-10-29) · verus 0.2026.10.26</p>
   </header>
 
   <div class="tiles" id="tiles"></div>
@@ -138,7 +138,7 @@
     <h2>Verified code composition per crate</h2>
     <p class="note">Line counts split into exec / spec / proof / trusted; hover for values.</p>
     <div class="legend" id="legend-comp"></div>
-    <svg id="svg-comp" role="img" aria-label="Stacked bar chart of verified code composition across 21 crates"></svg>
+    <svg id="svg-comp" role="img" aria-label="Stacked bar chart of verified code composition across 24 crates"></svg>
     <details class="tbl"><summary>Table view</summary><div id="tbl-comp"></div></details>
   </div>
 
@@ -152,7 +152,7 @@
 
   <div class="card">
     <h2>Bugs</h2>
-    <p class="note">18 findings (incl. 1 withdrawn FP), each anchored on a failed Verus obligation and backed by a PoC / runtime reproduction. Ordered: our reports first, then upstream-reported; within each group: fixed → fixing PR → issue open → FP withdrawn.</p>
+    <p class="note">21 findings (incl. 1 withdrawn FP), each anchored on a failed Verus obligation and backed by a PoC / runtime reproduction. Ordered: our reports first, then upstream-reported; within each group: fixed → fixing PR → issue open → FP withdrawn.</p>
     <div class="findings-wrap" id="findings"></div>
     <p class="note" style="margin-top:10px">① code bug · ② doc issue. Status: ✓ fixed · ↗ reported · ● reported by others / fix PR exists · ✕ FP withdrawn.</p>
   </div>
@@ -162,7 +162,7 @@
 
 <script>
 "use strict";
-/* ---- Data (line_count counts, 2026-10-29; +7 crates 2026-10-31; +bitflags 2026-11-01) ---- */
+/* ---- Data (line_count counts, 2026-10-29; +7 crates 2026-10-31; +bitflags 2026-11-01; +data-url/idna + bit-vec/form_urlencoded/base64 final batches; unified re-measure 2026-11-09; url/idna rows updated through batches A-L / A-K 2026-11-10/11) ---- */
 const S = {
   exec:    { name: "exec (translated)",  css: "var(--series-exec)" },
   spec:    { name: "spec (contracts)",   css: "var(--series-spec)" },
@@ -170,89 +170,110 @@ const S = {
   trusted: { name: "trusted (assumptions)", css: "var(--series-trusted)" },
 };
 const CRATES = [
-  { crate: "glob",            exec: 450, spec: 475, proof: 240, trusted:   0, comment: 449, hExec:   1, up:  950, cov: 47.4,
-    ver: "0.3.4", sha: "057cef2824f5a96f738e52d7d8ca3e024381bcc6",
-    res: "src 68v/1e · ut_pattern 75v/1e (matches_from obligations discharged for every star path; corrected figure, 2026-11-03 continued batch)", anchor: "1 (F1 anchor :964, reconciled to the current :138)" },
-  { crate: "byteorder",       exec: 299, spec: 286, proof: 815, trusted: 108, comment: 619, hExec:  92, up:  883, cov: 33.9,
-    ver: "1.5.0", sha: "5a82625fae462e8ba64cec8146b24a372b4d75c6",
-    res: "src lib 52v/2e · io 32v/6e · ut_roundtrip 58v/2e · cov_generic 57v/0e (2026-11-03 continued batch)", anchor: "8 (F5 all bit-paths + F3 both 64/128 widths)" },
-  { crate: "slab",            exec: 347, spec: 409, proof: 244, trusted:  13, comment: 610, hExec: 106, up:  609, cov: 57.0,
-    ver: "0.4.12", sha: "7d1d8ab00a7b8b1978b4bf21d9ae9633ac8c0b05",
-    res: "src 55v/5e · ut_slab 58v/5e · cover_diffset 59v/6e (batches 1–5 closed, 2026-11-03 continued batch)", anchor: "F1 six diagnostic sites (reconciled via #168) + D1 three-function shape anchors + docpanic anchor" },
-  { crate: "generational-arena", exec: 413, spec: 383, proof: 277, trusted: 23, comment: 562, hExec: 148, up: 609, cov: 67.8,
-    ver: "0.2.9", sha: "6dbc29e573aa192a2c7ae9c7f968eb8853311294",
-    res: "src 55v/1e · quickchecks 59v/1e · ut_21 58v/1e · ut_covdiff 63v/1e (quickchecks' 4 errors cleared, 2026-11-03 continued batch)", anchor: "1 (:147 = F1/F6 obligation anchors, reconciled against the historical open issue)" },
-  { crate: "humantime",       exec: 574, spec: 598, proof:  68, trusted:  32, comment: 464, hExec:  16, up: 1228, cov: 46.7,
-    ver: "2.4.0", sha: "997ff566cc731e3ece5c792c8b83dd78e459f202",
-    res: "src 71v/1e · roundtrip 38v/0e · ut_parse 100v/1e (both parse state machines fully discharged, 2026-11-03 continued batch)", anchor: "1 (F1 panic anchor, reconciled via #76; line numbers shifted by the translation)" },
-  { crate: "form_urlencoded", exec: 297, spec: 280, proof: 114, trusted:   0, comment: 214, hExec: 195, up:  257, cov: 115.6, cap100: true,
-    ver: "1.2.2", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
-    res: "src 54v/1e · 3 harnesses 61v/69v/68v, each 1e · 2026-11-02 diff-set reconciliation (public surface fully covered)", anchor: "1 (for_suffix panic anchor; fixed upstream #1168 / PR #1172)" },
-  { crate: "num-integer",     exec: 263, spec:  91, proof: 141, trusted:  12, comment: 310, hExec: 356, up:  357, cov: 73.7,
-    ver: "0.1.47", sha: "765fd9b3eb9397471d41b9f613e530f6d9d6383f",
-    res: "src lib 23v/13e · roots 3v/2e (documented control) · average 66v/0e · misc 19v/0e · ut_div 9v/0e (2026-11-03 continued batch, tail cleared)", anchor: "15 (F1–F5 obligation family; roots 2e are the # Panics control group)" },
-  { crate: "hex",             exec: 198, spec: 197, proof: 272, trusted:   0, comment: 159, hExec: 125, up:  320, cov: 61.9,
-    ver: "0.4.3", sha: "e25a8701f7f6b5ec4acedffcb4a45cfb69cc34eb",
-    res: "4 harnesses 139v/0e (including re-verification of the cited src) · rt matrix decode 65536 + encode 512, all matching", anchor: "— (the sole finding F1 is a doc bug, merged upstream)" },
-  { crate: "strsim",          exec: 575, spec: 280, proof: 1637, trusted:   0, comment: 321, hExec: 132, up:  804, cov: 71.5,
-    ver: "0.11.1", sha: "dacc84c0dc61eff0ee0ff66962bcf2e17018ad26",
-    res: "src 76v/0e · ut_hamming 77v/0e · ut_distance 79v/0e · ut_dameru 80v/0e (4 blocked-API errors cleared, 2026-11-03 continued batch)", anchor: "— (0e; 0 findings)" },
-  { crate: "siphasher",       exec: 841, spec: 410, proof:  40, trusted:   0, comment: 174, hExec: 371, up: 1080, cov: 77.9,
-    ver: "1.0.4", sha: "2fcf2a742340824ee23328e6eba4bc7ea0e52613",
-    res: "src 62v/0e · 5 harnesses, 559 obligations 0e · rt 352/352 diff=0 · all KATs pass", anchor: "— (0e; the big-endian observation obs-1 was not filed)" },
-  { crate: "untrusted",       exec: 186, spec: 193, proof:   7, trusted:   8, comment: 145, hExec: 359, up:  147, cov: 126.5, cap100: true,
-    ver: "0.9.0", sha: "b7c4aea36ca2ddcec71c323fb7b27d5724d73f3a",
-    res: "src 29v/0e · ut_tests 46v/0e · phase4 diff-set 34v/0e · cargo 13/13 · the universal never-panic claim holds", anchor: "— (0e)" },
-  { crate: "bit-vec",         exec: 424, spec: 523, proof: 2016, trusted:   0, comment: 267, hExec: 149, up: 1889, cov: 22.4,
-    ver: "0.10.1", sha: "cd5b4392be151fb507f3bdbf71ce1e73885dbc28",
-    res: "src 188v/0e · ut_core 205v/0e · d_diffset 218v/0e (D1–D2a discharged in three batches; D4 queued for later, 2026-11-03 continued batch)", anchor: "— (0e; the N1 doc-type finding is listed in the FINDINGS table)" },
-  { crate: "crc",             exec: 921, spec: 872, proof: 1753, trusted: 16, comment: 582, hExec:   0, up: 1228, cov: 75.0,
-    ver: "3.4.0", sha: "1894aa9f184d44cf1226aeb3048a3e91fc1b8df4",
-    res: "src 10 files, canonically 0e · 3 harnesses, all green · rt 107 ops ×12 lengths ×3 channels + KAT fails=0", anchor: "— (0e; 5 Verus-toolchain observations filed separately)" },
-  { crate: "base64",          exec: 413, spec: 285, proof:  293, trusted:   0, comment: 330, hExec: 138, up: 5100, cov: 8.1,
+  { crate: "base64",          exec: 1008, spec: 1939, proof: 4116, trusted:   0, comment: 1460, hExec: 358, up: 5100, cov: 19.8,
     ver: "0.23.1", sha: "5b98ee180cc7c2a64af6cb12c724b1721550e0d0",
-    res: "src 43v/2e (2e = add_padding doc anchors) · harness 21v/2e · rt both profiles ✓", anchor: "2 (add_padding doc: pre-fix index out of bounds at encode.rs:142)" },
+    res: "src 10 files 156v/2e (2e = add_padding withdrawn anchors, byte-identical) · harness 5 files: 27 witness theorems + 2 roundtrip theorems (encode fast-path + decode integration + S*-tail + ② decode(encode(x))==x closed, batches D–I, 2026-11-08/09) · rt both profiles ✓", anchor: "2 (add_padding doc: pre-fix index out of bounds at encode.rs:142)" },
   { crate: "base64ct",        exec: 515, spec: 722, proof: 1029, trusted:   0, comment: 508, hExec:  31, up: 1068, cov: 48.2,
     ver: "1.8.3", sha: "4c5fadb155ebc05c4a8a3abc05e4e64a6a100614",
     res: "std padded/unpadded, all depths 0e · six alphabets bit-level all green · harness 113/126/120v/0e", anchor: "— (0e; 0 findings)" },
+  { crate: "bit-vec",         exec: 1042, spec: 1519, proof: 6491, trusted: 19, comment: 1468, hExec: 635, up: 1889, cov: 55.2,
+    ver: "0.10.1", sha: "cd5b4392be151fb507f3bdbf71ce1e73885dbc28",
+    res: "src 469v/0e · harness ut_core + d_diffset 1–5, accepted panels green (batches A–D, 2026-11-07/08: count/byte/insert/remove/capacity/borrow families + movers append/split_off/grow + iteration/Blocks/Index + derive faces + storage contracts; verifiable diff-set cleared)", anchor: "— (0e; N1 fixed upstream via bit-vec#166; C1 in the FINDINGS table)" },
+  { crate: "bitflags",          exec: 435, spec: 388, proof:  324, trusted:   0, comment: 328, hExec: 422, up: 2374, cov: 18.3,
+    ver: "2.13.2", sha: "8384f6f6e1fd1ab3f448ccf17d400a9e1d6a5280",
+    res: "src 108v/0e · 4 harnesses 663v/0e · legacy PoC 62v/0e · rt not triggered (0 findings)", anchor: "— (0e; Flags trait, all 25 default bodies monomorphized + macro≡trait equivalence group + iterator semantic model)" },
+  { crate: "byteorder",       exec: 299, spec: 286, proof: 815, trusted: 108, comment: 619, hExec:  92, up:  883, cov: 33.9,
+    ver: "1.5.0", sha: "5a82625fae462e8ba64cec8146b24a372b4d75c6",
+    res: "src lib 52v/2e · io 32v/6e · ut_roundtrip 58v/2e · cov_generic 57v/0e (2026-11-03 continued batch)", anchor: "8 (F5 all bit-paths + F3 both 64/128 widths)" },
+  { crate: "crc",             exec: 921, spec: 872, proof: 1753, trusted: 16, comment: 582, hExec:   0, up: 1228, cov: 75.0,
+    ver: "3.4.0", sha: "1894aa9f184d44cf1226aeb3048a3e91fc1b8df4",
+    res: "src 10 files, canonically 0e · 3 harnesses, all green · rt 107 ops ×12 lengths ×3 channels + KAT fails=0", anchor: "— (0e; 5 Verus-toolchain observations filed separately)" },
   { crate: "data-encoding",   exec: 326, spec: 373, proof:  370, trusted:   0, comment: 176, hExec: 140, up: 1412, cov: 23.1,
     ver: "2.12.0-git", sha: "53e2ff65eb3157a7b113b8a1a8b3fc89ce898dbf",
     res: "src 43v/0e · 3 harnesses 50/50/51v/0e · rt matrix 256×2 tables, fully elementwise matching", anchor: "— (0e; the sole finding F1 is of doc type)" },
+  { crate: "data-url",        exec: 1001, spec: 1043, proof:  982, trusted:   0, comment:  569, hExec:  27, up:  497, cov: 201.4, cap100: true,
+    ver: "0.3.2", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
+    res: "src mime 47v/0e · forgiving_base64 14v/0e · lib tree 95v/0e · ut_lib 98v/0e · ut_mime 56v/0e · ut_wpt 116v/0e (--rlimit 120 ledger) · ut_display 99v/0e (batches A–B, 2026-11-08/09; deferred vectors 4/4 green, Display faces mirrored, domain closed)", anchor: "— (0e; 0 findings; one class-3 transcription fix 0x2E→0x2F, verified-side only)" },
+  { crate: "form_urlencoded", exec: 307, spec: 316, proof: 158, trusted:   6, comment: 391, hExec: 212, up:  257, cov: 119.5, cap100: true,
+    ver: "1.2.2", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
+    res: "src 62v/1e (1e = for_suffix panic anchor) · 3 harnesses 0e · 2026-11-08 domain closure (the sole unsafe fn closed via the vstd UTF-8 model; closure/write surface blocked; trusted 6 = injected contracts)", anchor: "1 (for_suffix panic anchor; fixed upstream #1168 / PR #1172)" },
+  { crate: "generational-arena", exec: 413, spec: 383, proof: 277, trusted: 23, comment: 562, hExec: 148, up: 609, cov: 67.8,
+    ver: "0.2.9", sha: "6dbc29e573aa192a2c7ae9c7f968eb8853311294",
+    res: "src 55v/1e · quickchecks 59v/1e · ut_21 58v/1e · ut_covdiff 63v/1e (quickchecks' 4 errors cleared, 2026-11-03 continued batch)", anchor: "1 (:147 = F1/F6 obligation anchors, reconciled against the historical open issue)" },
+  { crate: "glob",            exec: 450, spec: 475, proof: 240, trusted:   0, comment: 449, hExec:   1, up:  950, cov: 47.4,
+    ver: "0.3.4", sha: "057cef2824f5a96f738e52d7d8ca3e024381bcc6",
+    res: "src 68v/1e · ut_pattern 75v/1e (matches_from obligations discharged for every star path; corrected figure, 2026-11-03 continued batch)", anchor: "1 (F1 anchor :964, reconciled to the current :138)" },
+  { crate: "hex",             exec: 198, spec: 197, proof: 272, trusted:   0, comment: 159, hExec: 125, up:  320, cov: 61.9,
+    ver: "0.4.3", sha: "e25a8701f7f6b5ec4acedffcb4a45cfb69cc34eb",
+    res: "4 harnesses 139v/0e (including re-verification of the cited src) · rt matrix decode 65536 + encode 512, all matching", anchor: "— (the sole finding F1 is a doc bug, merged upstream)" },
+  { crate: "humantime",       exec: 574, spec: 598, proof:  68, trusted:  32, comment: 464, hExec:  16, up: 1228, cov: 46.7,
+    ver: "2.4.0", sha: "997ff566cc731e3ece5c792c8b83dd78e459f202",
+    res: "src 71v/1e · roundtrip 38v/0e · ut_parse 100v/1e (both parse state machines fully discharged, 2026-11-03 continued batch)", anchor: "1 (F1 panic anchor, reconciled via #76; line numbers shifted by the translation)" },
+  { crate: "idna",            exec: 2015, spec: 3430, proof: 8862, trusted:  47, comment: 3520, hExec: 2293, up: 1752, cov: 115.0, cap100: true,
+    ver: "1.1.0", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
+    res: "uts46 376v/0e · punycode 161v/0e · deprecated 390v/0e · lib_errors 2v/0e · uts46_leaf 430v/0e · punycode_vectors 237v/0e · idnatest_v2_samples 399v/0e (rlimit ledger @100/200; batches A-K 2026-11-08/10: RFC 3492 + P1-P6 + ContextJ + lossy decoder (26.9M-input differential, 0 mismatch) + CheckBidi + mapping window + innermost label loop + E-TILE site wiring + census lemma family (11) + the E-TILE feeding-gate fix (ret.2 || !fail_fast); the top-level walk text is fully transcribed, peaking at 391v/5e, remaining accounting-glue faces handed over per stop-loss with patch scripts archived; the Passthrough lead was runtime-confirmed and filed as finding-1)", anchor: "1 (finding-1 Passthrough with had==true / to_unicode FFFD-guarantee break; filed as rust-url#1181) · punycode overflow doc-lead closed as harmless" },
   { crate: "integer-encoding", exec: 749, spec: 329, proof:  599, trusted:   0, comment: 307, hExec: 295, up:  488, cov: 153.5, cap100: true,
     ver: "4.1.0", sha: "e0a10d01e86a38d0df177676c62f9a10c845ab53",
     res: "src 4 files 135v/34e (fixed.rs 59/0) · 3 harnesses · rt 4 PoC, both profiles ✓", anchor: "F3 write_fixedint 8-byte cap panic anchor (writer.rs:69-77)" },
+  { crate: "num-integer",     exec: 263, spec:  91, proof: 141, trusted:  12, comment: 310, hExec: 356, up:  357, cov: 73.7,
+    ver: "0.1.47", sha: "765fd9b3eb9397471d41b9f613e530f6d9d6383f",
+    res: "src lib 23v/13e · roots 3v/2e (documented control) · average 66v/0e · misc 19v/0e · ut_div 9v/0e (2026-11-03 continued batch, tail cleared)", anchor: "15 (F1–F5 obligation family; roots 2e are the # Panics control group)" },
   { crate: "percent-encoding", exec: 209, spec: 246, proof:  371, trusted:   0, comment: 242, hExec: 137, up:  356, cov: 58.7,
     ver: "2.3.2", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
     res: "src 2 files 42v/0e · 3 harnesses 67/70/64v/0e · rt matrix M1–M6 all pass", anchor: "1 (AsciiSet::add OOB isomorphic anchor, merged into #1132)" },
   { crate: "semver",          exec: 1011, spec: 1191, proof:  242, trusted:   0, comment: 385, hExec: 207, up: 1135, cov: 89.1,
     ver: "1.0.28", sha: "280ebcb6edac3aa4cdc545dbff8a26c5ac4861fe",
     res: "src 70v/19e · harness 77v/34e (the residual errors are translation-side gaps, not upstream anchors)", anchor: "— (0 findings)" },
+  { crate: "siphasher",       exec: 841, spec: 410, proof:  40, trusted:   0, comment: 174, hExec: 371, up: 1080, cov: 77.9,
+    ver: "1.0.4", sha: "2fcf2a742340824ee23328e6eba4bc7ea0e52613",
+    res: "src 62v/0e · 5 harnesses, 559 obligations 0e · rt 352/352 diff=0 · all KATs pass", anchor: "— (0e; the big-endian observation obs-1 was not filed)" },
+  { crate: "slab",            exec: 347, spec: 409, proof: 244, trusted:  13, comment: 610, hExec: 106, up:  609, cov: 57.0,
+    ver: "0.4.12", sha: "7d1d8ab00a7b8b1978b4bf21d9ae9633ac8c0b05",
+    res: "src 55v/5e · ut_slab 58v/5e · cover_diffset 59v/6e (batches 1–5 closed, 2026-11-03 continued batch)", anchor: "F1 six diagnostic sites (reconciled via #168) + D1 three-function shape anchors + docpanic anchor" },
+  { crate: "strsim",          exec: 575, spec: 280, proof: 1637, trusted:   0, comment: 321, hExec: 132, up:  804, cov: 71.5,
+    ver: "0.11.1", sha: "dacc84c0dc61eff0ee0ff66962bcf2e17018ad26",
+    res: "src 76v/0e · ut_hamming 77v/0e · ut_distance 79v/0e · ut_dameru 80v/0e (4 blocked-API errors cleared, 2026-11-03 continued batch)", anchor: "— (0e; 0 findings)" },
   { crate: "unicode-segmentation", exec: 210, spec: 574, proof:  184, trusted: 538, comment: 277, hExec: 362, up: 4866, cov: 4.3,
     ver: "1.13.3", sha: "e445e101b129862148127c9e41ab4486b0125232",
     res: "src+harness 338v/0e (table-driven external contracts) · rt 1,112,064 code points, axiom-level fully verified", anchor: "— (0e; the F1 code-type finding was merged into #182)" },
-  { crate: "bitflags",          exec: 435, spec: 388, proof:  324, trusted:   0, comment: 328, hExec: 422, up: 2374, cov: 18.3,
-    ver: "2.13.2", sha: "8384f6f6e1fd1ab3f448ccf17d400a9e1d6a5280",
-    res: "src 108v/0e · 4 harnesses 663v/0e · legacy PoC 62v/0e · rt not triggered (0 findings)", anchor: "— (0e; Flags trait, all 25 default bodies monomorphized + macro≡trait equivalence group + iterator semantic model)" },
+  { crate: "untrusted",       exec: 186, spec: 193, proof:   7, trusted:   8, comment: 145, hExec: 359, up:  147, cov: 126.5, cap100: true,
+    ver: "0.9.0", sha: "b7c4aea36ca2ddcec71c323fb7b27d5724d73f3a",
+    res: "src 29v/0e · ut_tests 46v/0e · phase4 diff-set 34v/0e · cargo 13/13 · the universal never-panic claim holds", anchor: "— (0e)" },
+  { crate: "url",             exec: 3059, spec: 5367, proof: 9487, trusted:   0, comment: 3095, hExec: 1051, up: 3528, cov: 86.7,
+    ver: "2.5.8", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
+    res: "parse_machine 293v/0e · ut_read_api 304v/0e · coverage_props 287v/0e · three new harness files fuzz_roundtrip 292v + wpt_samples 325v + wpt_samples_b 347v all 0e (batches A-L 2026-11-08/11: full read API + parser body + deep host real body (external 0) + write faces set_fragment/set_port/set_query/set_scheme/set_username/set_password + ipv4 exec tail chain + restricted-class fuzz/wpt harness over 37 verbatim samples; set_path/set_host and ipv6 exec remain parked with handoff notes)", anchor: "1 (finding-1 set_scheme doc bullet 3 vs the code gates; filed as rust-url#1182) · twelve rlimit sites, all with ambient-flip evidence" },
 ];
-const T = { exec: 9656, spec: 9105, proof: 11036, trusted: 750, comment: 7429, hExec: 3782, up: 27160, cov: 35.6 };
+const T = { exec: 16954, spec: 21631, proof: 38709, trusted: 822, comment: 17121, hExec: 7876, up: 32937, cov: 51.5 };
 
 const FINDINGS = [
+  { crate: "bit-vec", what: "nor/xnor with n%32&gt;0 break the documented “Returns true if self changed”", site: "lib.rs:1214-1221/1248-1255", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/contain-rs/bit-vec/pull/166", linkTxt: "bit-vec#166" },
+  { crate: "data-encoding", what: "encode with wrap returns \"\" for empty input, not ending with the separator — contradicts the documented \"output always ends with the separator\" (holds for non-empty input)", site: "lib.rs:1184-1185", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/ia0/data-encoding/pull/181", linkTxt: "data-encoding#181" },
   { crate: "form_urlencoded", what: "for_suffix panics when start_position &gt; target.len() — undocumented", site: "lib.rs:222-229", kind: "② Docs",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/servo/rust-url/pull/1172", linkTxt: "servo/rust-url#1172" },
+  { crate: "base64", what: "GeneralPurposeConfig rustdoc references non-existent DecodePaddingMode variant names (RequireCanonicalPadding/RequireNoPadding; real: RequireCanonical/RequireNone) — surviving since v0.21.7", site: "engine/general_purpose/mod.rs:332/388/391", kind: "② Docs",
+    st: "reported", stTxt: "Reported", link: "https://github.com/marshallpierce/rust-base64/pull/318", linkTxt: "rust-base64#318" },
   { crate: "byteorder", what: "write_uint family: nbytes &lt;= buf.len() precondition missing from # Panics", site: "lib.rs:1952/1966", kind: "② Docs",
     st: "reported", stTxt: "Reported", link: "https://github.com/BurntSushi/byteorder/pull/230", linkTxt: "byteorder#230" },
   { crate: "num-integer", what: "binomial(5,−3)==1: no domain guard for k&lt;0; multinomial is order-dependent", site: "lib.rs:1150-1168", kind: "② Docs",
     st: "reported", stTxt: "Reported", link: "https://github.com/rust-num/num-integer/pull/84", linkTxt: "num-integer#84" },
   { crate: "num-integer", what: "is_multiple_of(MIN, −1) lacks the −1 guard", site: "lib.rs:574", kind: "② Docs",
     st: "reported", stTxt: "Reported", link: "https://github.com/rust-num/num-integer/pull/83", linkTxt: "num-integer#83" },
-  { crate: "bit-vec", what: "nor/xnor with n%32&gt;0 break the documented “Returns true if self changed”", site: "lib.rs:1214-1221/1248-1255", kind: "② Docs",
-    st: "reported", stTxt: "Reported", link: "https://github.com/contain-rs/bit-vec/issues/165", linkTxt: "bit-vec#165" },
+  { crate: "bit-vec", what: "split_off leaves an extra zero storage block (0&lt;nbits%32&lt;=at%32), breaking the storage-length invariant — safe methods all()/count_zeros() return wrong results", site: "lib.rs:1449-1487", kind: "② Structure",
+    st: "reported", stTxt: "Reported", link: "https://github.com/contain-rs/bit-vec/issues/167", linkTxt: "bit-vec#167" },
+  { crate: "glob", what: "Pattern::new(\"a/[b/c]\") compiles (the char class swallows /) while glob()/glob_with() reject the same string — the two APIs diverge on one pattern; doc only cites Pattern::new", site: "code lib.rs:246-252 / :703-711 / doc :171-172", kind: "② Docs",
+    st: "reported", stTxt: "Reported", link: "https://github.com/rust-lang/glob/issues/196", linkTxt: "glob#196" },
+  { crate: "idna", what: "early-return Passthrough sites gate !had_errors only under debug_assert — a CheckBidi-invalid input panics in debug, silently returns Ok(Passthrough) in release; to_unicode also drops the guaranteed U+FFFD", site: "uts46.rs:827-830/858-861/913-915", kind: "① Code bug",
+    st: "reported", stTxt: "Reported", link: "https://github.com/servo/rust-url/issues/1181", linkTxt: "servo/rust-url#1181", vf: 8 },
   { crate: "integer-encoding", what: "read_varint: ① overflow misreported as EOF (doc says truncated); ② overlong varint consumes one extra byte", site: "reader.rs:19-21 doc / :95-107 impl", kind: "①/②",
-    st: "reported", stTxt: "Reported", link: "https://github.com/dermesser/integer-encoding-rs/issues/47", linkTxt: "integer-encoding#47 (case 1; case 2 pending)" },
+    st: "reported", stTxt: "Reported", link: "https://github.com/dermesser/integer-encoding-rs/issues/47", linkTxt: "integer-encoding#47" },
   { crate: "slab", what: "get2_mut panics on an out-of-bounds key; rustdoc promises None", site: "lib.rs:796/800", kind: "① Code bug",
     st: "reported", stTxt: "Reported", link: "https://github.com/tokio-rs/slab/issues/168", linkTxt: "tokio-rs/slab#168" },
+  { crate: "url", what: "set_scheme doc bullet 3 promises Err for file (with host) switching to special schemes — the implementation returns Ok and actually migrates; the doc conditions and the code gates diverge on two further arms", site: "lib.rs:2357-2358 doc / :2466-2496 impl", kind: "② Docs",
+    st: "reported", stTxt: "Reported", link: "https://github.com/servo/rust-url/issues/1182", linkTxt: "servo/rust-url#1182", vf: 8 },
   { crate: "base64", what: "add_padding doc “at least 2” insufficient — withdrawn: all call sites safe", site: "encode.rs:133/136-146", kind: "FP",
-    st: "fp", stTxt: "FP withdrawn", link: "https://github.com/marshallpierce/rust-base64/pull/317", linkTxt: "rust-base64#317 (closed)" },
+    st: "fp", stTxt: "FP withdrawn", link: "https://github.com/marshallpierce/rust-base64/pull/317", linkTxt: "rust-base64#317" },
   { crate: "humantime", what: "add_current carry off-by-one: out-of-range input panics instead of Err(NumberOverflow)", site: "duration.rs:296", kind: "① Code bug",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/chronotope/humantime/pull/73", linkTxt: "chronotope/humantime#73" },
   { crate: "glob", what: "panics on a non-UTF-8 filename under require_literal_leading_dot", site: "lib.rs:964", kind: "① Code bug",
@@ -262,7 +283,7 @@ const FINDINGS = [
   { crate: "humantime", what: "empty fraction “.Z” accepted; duplicate of upstream PR #75", site: "date.rs:169/184-186", kind: "② Docs",
     st: "known", stTxt: "Fix PR exists", link: "https://github.com/chronotope/humantime/pull/75", linkTxt: "humantime#75" },
   { crate: "byteorder", what: "read_{uint,int,uint128,int128} panic on out-of-range nbytes; # Errors only", site: "io.rs:429/454/462/470", kind: "①/②",
-    st: "known", stTxt: "Reported (Kani)", link: "https://github.com/BurntSushi/byteorder/issues/224", linkTxt: "byteorder#224" },
+    st: "known", stTxt: "Reported elsewhere", link: "https://github.com/BurntSushi/byteorder/issues/224", linkTxt: "byteorder#224" },
   { crate: "byteorder", what: "write_int silently truncates: write_int(100000, 2) → -31072", site: "lib.rs:1938", kind: "② Docs",
     st: "known", stTxt: "Reported by others", link: "https://github.com/BurntSushi/byteorder/issues/205", linkTxt: "byteorder#205" },
   { crate: "humantime", what: "format_rfc3339 panics on pre-epoch SystemTime", site: "date.rs:263-264", kind: "① Code bug",
@@ -295,6 +316,9 @@ const CRATE_REPO = {
   base64: "marshallpierce/rust-base64",
   base64ct: "RustCrypto/formats",
   "data-encoding": "ia0/data-encoding",
+  "data-url": "servo/rust-url",
+  idna: "servo/rust-url",
+  url: "servo/rust-url",
   "integer-encoding": "dermesser/integer-encoding-rs",
   "percent-encoding": "servo/rust-url",
   semver: "dtolnay/semver",
@@ -309,10 +333,10 @@ function crateLinkHTML(name) { return `<a href="${CRATE_URL[name]}" target="_bla
 (function tiles() {
   const el = document.getElementById("tiles");
   const items = [
-    { label: "Crates verified", value: "21" },
-    { label: "Verified code", value: "9,656 LoC" },
-    { label: "Translation coverage", value: "35.6%", sub: "all-line total across 21 crates" },
-    { label: "Registered findings", value: "18", sub: "continued-batch additions included" },
+    { label: "Crates verified", value: "24" },
+    { label: "Verified code", value: "16,954 LoC" },
+    { label: "Translation coverage", value: "51.5%" },
+    { label: "Registered findings", value: "24", sub: "filed / fixed / known-duplicated" },
   ];
   for (const t of items) {
     const d = document.createElement("div"); d.className = "tile";
@@ -410,7 +434,9 @@ function bindTip(target, build) {
   });
   // baseline + ticks
   svg.appendChild(mk("line", { x1: left, y1: topPad, x2: left, y2: H - 12, class: "axis" }));
-  [0, 500, 1000, 1500, 2000, 2500, 3000, 3500].filter(t => t <= maxTotal).forEach(t => {
+  const step = [100, 250, 500, 1000, 2500, 5000, 10000].find(x => maxTotal / x <= 8) || 10000;
+  const ticks = []; for (let t = 0; t <= maxTotal; t += step) ticks.push(t);
+  ticks.forEach(t => {
     const gx = left + scale(t);
     svg.appendChild(mk("line", { x1: gx, y1: topPad, x2: gx, y2: H - 12, class: "gridline" }));
     const tx = mk("text", { x: gx, y: H - 2, "text-anchor": "middle", class: "tick" }); tx.textContent = t; svg.appendChild(tx);
