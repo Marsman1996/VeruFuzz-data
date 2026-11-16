@@ -93,6 +93,7 @@
   .findings { min-width: 860px; }
   .findings td { font-size: 12.8px; }
   .findings code { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--page); padding: 1px 4px; border-radius: 4px; }
+  .findings td .site { display: block; margin-top: 3px; background: none; padding: 0; color: var(--text-secondary); }
   .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 99px; padding: 1px 9px 1px 7px; font-size: 11.5px; color: var(--text-primary); white-space: nowrap; }
   .chip .dot { width: 7px; height: 7px; border-radius: 50%; }
   .chip.c-fixed .dot { background: var(--good); } .chip.c-fixed .ic { color: var(--good); }
@@ -129,7 +130,7 @@
 <div class="wrap">
   <header>
     <h1>VeruFuzz · Verus verification progress</h1>
-    <p class="meta">Updated 2026-11-11 (initial version 2026-10-29) · verus 0.2026.10.26</p>
+    <p class="meta">Updated 2026-11-16 (initial version 2026-10-29) · verus 0.2026.10.26</p>
   </header>
 
   <div class="tiles" id="tiles"></div>
@@ -138,7 +139,7 @@
     <h2>Verified code composition per crate</h2>
     <p class="note">Line counts split into exec / spec / proof / trusted; hover for values.</p>
     <div class="legend" id="legend-comp"></div>
-    <svg id="svg-comp" role="img" aria-label="Stacked bar chart of verified code composition across 24 crates"></svg>
+    <svg id="svg-comp" role="img" aria-label="Stacked bar chart of verified code composition across 26 crates"></svg>
     <details class="tbl"><summary>Table view</summary><div id="tbl-comp"></div></details>
   </div>
 
@@ -152,7 +153,7 @@
 
   <div class="card">
     <h2>Bugs</h2>
-    <p class="note">21 findings (incl. 1 withdrawn FP), each anchored on a failed Verus obligation and backed by a PoC / runtime reproduction. Ordered: our reports first, then upstream-reported; within each group: fixed → fixing PR → issue open → FP withdrawn.</p>
+    <p class="note">36 findings (incl. 1 withdrawn FP), each anchored on a failed Verus obligation and backed by a PoC / runtime reproduction. Ordered: our reports first, then upstream-reported; within each group: fixed → fixing PR → issue open → FP withdrawn, alphabetical by crate within each status.</p>
     <div class="findings-wrap" id="findings"></div>
     <p class="note" style="margin-top:10px">① code bug · ② doc issue. Status: ✓ fixed · ↗ reported · ● reported by others / fix PR exists · ✕ FP withdrawn.</p>
   </div>
@@ -162,7 +163,7 @@
 
 <script>
 "use strict";
-/* ---- Data (line_count counts, 2026-10-29; +7 crates 2026-10-31; +bitflags 2026-11-01; +data-url/idna + bit-vec/form_urlencoded/base64 final batches; unified re-measure 2026-11-09; url/idna rows updated through batches A-L / A-K 2026-11-10/11) ---- */
+/* ---- Data (line_count counts, 2026-10-29; +7 crates 2026-10-31; +bitflags 2026-11-01; +data-url/idna + bit-vec/form_urlencoded/base64 final batches; unified re-measure 2026-11-09; url/idna rows updated through batches A-L / A-K 2026-11-10/11; findings statuses refreshed 2026-11-12: bit-vec#167 fixed via PR #168, url#1182 fixed via PR #1183; + jiff batch 2026-11-16 (exec 7,687 / hExec 12; cov denominator = jiff + jiff-core combined 45,815 exec lines; findings +13: 12 fixed upstream within a week via jiff#695/#699/#701/#702/#705/#709 — F2–F5 filed as one issue #696, F6/F7/F8/F10/F12 as one docs PR #709 — and F13 not filed); + bit-set batch 2026-11-12 (exec 554 / hExec 592 / cov 130.7 shown capped at 100; 0 upstream findings); bit-vec row refreshed to the bit-set H4 bridge-lemma values (spec/proof/comment +30/+65/+30) ---- */
 const S = {
   exec:    { name: "exec (translated)",  css: "var(--series-exec)" },
   spec:    { name: "spec (contracts)",   css: "var(--series-spec)" },
@@ -176,9 +177,13 @@ const CRATES = [
   { crate: "base64ct",        exec: 515, spec: 722, proof: 1029, trusted:   0, comment: 508, hExec:  31, up: 1068, cov: 48.2,
     ver: "1.8.3", sha: "4c5fadb155ebc05c4a8a3abc05e4e64a6a100614",
     res: "std padded/unpadded, all depths 0e · six alphabets bit-level all green · harness 113/126/120v/0e", anchor: "— (0e; 0 findings)" },
-  { crate: "bit-vec",         exec: 1042, spec: 1519, proof: 6491, trusted: 19, comment: 1468, hExec: 635, up: 1889, cov: 55.2,
+  { crate: "bit-set",         exec:  554, spec:  800, proof: 2409, trusted:   0, comment:  737, hExec: 592, up:  424, cov: 130.7, cap100: true,
+    ver: "0.11.1", sha: "fdd6b816ce203f54e3960ade8c541bf420a1087c",
+    res: "src 643v/0e (bridged from the bit-vec 470v/0e source) · 4 harnesses 666/665/742/649v all 0e · batches A–H4 closed 2026-11-12 (UT 21-example member surface closed + fuzz 13-op surface incl. the to_bytes roundtrip; 0 upstream findings, 2 mirror-side repairs verified-side only)",
+    anchor: "— (0e; 0 findings)" },
+  { crate: "bit-vec",         exec: 1042, spec: 1549, proof: 6556, trusted:  19, comment: 1498, hExec: 635, up: 1889, cov: 55.2,
     ver: "0.10.1", sha: "cd5b4392be151fb507f3bdbf71ce1e73885dbc28",
-    res: "src 469v/0e · harness ut_core + d_diffset 1–5, accepted panels green (batches A–D, 2026-11-07/08: count/byte/insert/remove/capacity/borrow families + movers append/split_off/grow + iteration/Blocks/Index + derive faces + storage contracts; verifiable diff-set cleared)", anchor: "— (0e; N1 fixed upstream via bit-vec#166; C1 in the FINDINGS table)" },
+    res: "src 470v/0e (bit-set batch H4 added the byte-word bridge lemmas, 2026-11-12) · harness ut_core + d_diffset 1–5, accepted panels green (batches A–D, 2026-11-07/08: count/byte/insert/remove/capacity/borrow families + movers append/split_off/grow + iteration/Blocks/Index + derive faces + storage contracts; verifiable diff-set cleared)", anchor: "— (0e; N1 fixed upstream via bit-vec#166; C1 fixed upstream via bit-vec#168)" },
   { crate: "bitflags",          exec: 435, spec: 388, proof:  324, trusted:   0, comment: 328, hExec: 422, up: 2374, cov: 18.3,
     ver: "2.13.2", sha: "8384f6f6e1fd1ab3f448ccf17d400a9e1d6a5280",
     res: "src 108v/0e · 4 harnesses 663v/0e · legacy PoC 62v/0e · rt not triggered (0 findings)", anchor: "— (0e; Flags trait, all 25 default bodies monomorphized + macro≡trait equivalence group + iterator semantic model)" },
@@ -209,6 +214,10 @@ const CRATES = [
   { crate: "humantime",       exec: 574, spec: 598, proof:  68, trusted:  32, comment: 464, hExec:  16, up: 1228, cov: 46.7,
     ver: "2.4.0", sha: "997ff566cc731e3ece5c792c8b83dd78e459f202",
     res: "src 71v/1e · roundtrip 38v/0e · ut_parse 100v/1e (both parse state machines fully discharged, 2026-11-03 continued batch)", anchor: "1 (F1 panic anchor, reconciled via #76; line numbers shifted by the translation)" },
+  { crate: "jiff",         exec: 7687, spec: 7346, proof: 9966, trusted:  34, comment: 9496, hExec:  12, up: 45815, cov: 16.8,
+    ver: "0.2.43", sha: "627c7358a617c61c2279e094e4feb056a2040138",
+    res: "lib 290v/0e · 9 drivers 40/57/191/317/325/359/549/621v/0e (j12 panel 525v/1e is batch history: 1e = the closed-panel arith arm drifting under the fat union, its own j11 359v/0e is the arbiter; j13 = 621v combined record @600, @300 exceeds budget on the iso-rows panel only) · harness 292/298/294v/0e · batches J1–J13 closed 2026-11-12/13 (full mirror of jiff + jiff-core: bounds / calendar / Span arithmetic / round / compare-relative; fmt and tz planes are declared permanently out of scope — hence the cov denominator is both crates' 45,815 exec lines and the true 16.8% ratio is a net-coverage lower bound)",
+    anchor: "13 (12/13 fixed upstream: F1/F9/F11 filed directly as PRs · F2–F5 folded into issue #696 · F3 into issue #703 · F6/F7/F8/F10/F12 folded into docs PR #709 — #695/#699/#701/#702/#705/#709 all merged; F13 not filed)" },
   { crate: "idna",            exec: 2015, spec: 3430, proof: 8862, trusted:  47, comment: 3520, hExec: 2293, up: 1752, cov: 115.0, cap100: true,
     ver: "1.1.0", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
     res: "uts46 376v/0e · punycode 161v/0e · deprecated 390v/0e · lib_errors 2v/0e · uts46_leaf 430v/0e · punycode_vectors 237v/0e · idnatest_v2_samples 399v/0e (rlimit ledger @100/200; batches A-K 2026-11-08/10: RFC 3492 + P1-P6 + ContextJ + lossy decoder (26.9M-input differential, 0 mismatch) + CheckBidi + mapping window + innermost label loop + E-TILE site wiring + census lemma family (11) + the E-TILE feeding-gate fix (ret.2 || !fail_fast); the top-level walk text is fully transcribed, peaking at 391v/5e, remaining accounting-glue faces handed over per stop-loss with patch scripts archived; the Passthrough lead was runtime-confirmed and filed as finding-1)", anchor: "1 (finding-1 Passthrough with had==true / to_unicode FFFD-guarantee break; filed as rust-url#1181) · punycode overflow doc-lead closed as harmless" },
@@ -241,18 +250,50 @@ const CRATES = [
     res: "src 29v/0e · ut_tests 46v/0e · phase4 diff-set 34v/0e · cargo 13/13 · the universal never-panic claim holds", anchor: "— (0e)" },
   { crate: "url",             exec: 3059, spec: 5367, proof: 9487, trusted:   0, comment: 3095, hExec: 1051, up: 3528, cov: 86.7,
     ver: "2.5.8", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
-    res: "parse_machine 293v/0e · ut_read_api 304v/0e · coverage_props 287v/0e · three new harness files fuzz_roundtrip 292v + wpt_samples 325v + wpt_samples_b 347v all 0e (batches A-L 2026-11-08/11: full read API + parser body + deep host real body (external 0) + write faces set_fragment/set_port/set_query/set_scheme/set_username/set_password + ipv4 exec tail chain + restricted-class fuzz/wpt harness over 37 verbatim samples; set_path/set_host and ipv6 exec remain parked with handoff notes)", anchor: "1 (finding-1 set_scheme doc bullet 3 vs the code gates; filed as rust-url#1182) · twelve rlimit sites, all with ambient-flip evidence" },
+    res: "parse_machine 293v/0e · ut_read_api 304v/0e · coverage_props 287v/0e · three new harness files fuzz_roundtrip 292v + wpt_samples 325v + wpt_samples_b 347v all 0e (batches A-L 2026-11-08/11: full read API + parser body + deep host real body (external 0) + write faces set_fragment/set_port/set_query/set_scheme/set_username/set_password + ipv4 exec tail chain + restricted-class fuzz/wpt harness over 37 verbatim samples; set_path/set_host and ipv6 exec remain parked with handoff notes)", anchor: "1 (finding-1 set_scheme doc bullet 3 vs the code gates; filed as rust-url#1182, fixed upstream via rust-url#1183) · twelve rlimit sites, all with ambient-flip evidence" },
 ];
-const T = { exec: 16954, spec: 21631, proof: 38709, trusted: 822, comment: 17121, hExec: 7876, up: 32937, cov: 51.5 };
+const T = { exec: 25195, spec: 29807, proof: 51149, trusted: 856, comment: 27384, hExec: 8480, up: 79176, cov: 31.8 };
 
 const FINDINGS = [
   { crate: "bit-vec", what: "nor/xnor with n%32&gt;0 break the documented “Returns true if self changed”", site: "lib.rs:1214-1221/1248-1255", kind: "② Docs",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/contain-rs/bit-vec/pull/166", linkTxt: "bit-vec#166" },
-  { crate: "data-encoding", what: "encode with wrap returns \"\" for empty input, not ending with the separator — contradicts the documented \"output always ends with the separator\" (holds for non-empty input)", site: "lib.rs:1184-1185", kind: "② Docs",
+  { crate: "bit-vec", what: "split_off leaves an extra zero storage block (0&lt;nbits%32&lt;=at%32) — safe methods all()/count_zeros() return wrong results", site: "lib.rs:1449-1487", kind: "② Structure",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/contain-rs/bit-vec/pull/168", linkTxt: "bit-vec#168" },
+  { crate: "data-encoding", what: "encode with wrap returns \"\" for empty input — contradicts the documented \"output always ends with the separator\" (non-empty input)", site: "lib.rs:1184-1185", kind: "② Docs",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/ia0/data-encoding/pull/181", linkTxt: "data-encoding#181" },
   { crate: "form_urlencoded", what: "for_suffix panics when start_position &gt; target.len() — undocumented", site: "lib.rs:222-229", kind: "② Docs",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/servo/rust-url/pull/1172", linkTxt: "servo/rust-url#1172" },
-  { crate: "base64", what: "GeneralPurposeConfig rustdoc references non-existent DecodePaddingMode variant names (RequireCanonicalPadding/RequireNoPadding; real: RequireCanonical/RequireNone) — surviving since v0.21.7", site: "engine/general_purpose/mod.rs:332/388/391", kind: "② Docs",
+  { crate: "jiff", what: "Timestamp SubAssign adds instead of subtracts (<code>ts -= 400</code> advances by 400 s)", site: "jiff-core timestamp.rs:740-745/:753-758", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/695", linkTxt: "jiff#695" },
+  { crate: "jiff", what: "checked_add/checked_sub return Ok for sums below Timestamp::MIN, against the documented error guarantee",
+    site: "jiff-core timestamp.rs:412-432/:472-497 (root :547)", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/699", linkTxt: "jiff#699" },
+  { crate: "jiff", what: "Result-typed checked_add/checked_sub panic on i128 midsum overflow (release too)",
+    site: "jiff-core timestamp.rs:421-426/:485-489", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/699", linkTxt: "jiff#699" },
+  { crate: "jiff", what: "a sum landing exactly on MAX is rejected: Err from checked_add, panic via the operator",
+    site: "jiff-core timestamp.rs:510-511 / operator :658", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/699", linkTxt: "jiff#699" },
+  { crate: "jiff", what: "a zero Span × i64::MIN errs/panics although 0×MIN == 0; the same span × MAX is Ok (asymmetric)", site: "jiff span.rs:1499-1508 (operators :3049/:3062)", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/701", linkTxt: "jiff#701" },
+  { crate: "jiff", what: "ISOWeekDate::new_constrain doc promises clamping to the nearest legal equivalent; week &gt; 53 passes through unchanged", site: "jiff-core civil/date.rs:1056-1084", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/702", linkTxt: "jiff#702" },
+  { crate: "jiff", what: "checked_add_seconds drops the sign carry across the epoch, breaking Eq/Ord consistency; Add&lt;i64&gt; operators share it", site: "jiff-core timestamp.rs:579-598/:631-637", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/705", linkTxt: "jiff#705" },
+  { crate: "jiff", what: "subsec_nanosecond / subsec_microsecond rustdocs swap each other's units and ranges", site: "jiff-core timestamp.rs:242-264", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/709", linkTxt: "jiff#709" },
+  { crate: "jiff", what: "TimeNanosecond::to_time doc claims the subsecond is always 0 — new(1).to_time().subsec_nanosecond() == 1", site: "jiff-core civil/time.rs:441-455", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/709", linkTxt: "jiff#709" },
+  { crate: "jiff", what: "SignedDuration::new doc's no-panic claim falsifiable: negative seconds + out-of-range nanos panic", site: "jiff signed_duration.rs:373-415 (panic :412:25)", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/709", linkTxt: "jiff#709" },
+  { crate: "jiff", what: "ISOWeekDate::MIN/MAX doc labels swapped (minimum/maximum), identically in jiff-core and the jiff wrapper", site: "jiff-core civil/date.rs:992/:999 + jiff civil/iso_week_date.rs:163-173", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/709", linkTxt: "jiff#709" },
+  { crate: "jiff", what: "civil::Time::until's # Properties sentence swaps the operands (the guarantee truly belongs to Time::since)", site: "jiff civil/time.rs:1171-1174", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/709", linkTxt: "jiff#709" },
+  { crate: "url", what: "set_scheme doc bullet 3 promises Err for file (with host) switching to special schemes — the implementation returns Ok and actually migrates",
+    site: "lib.rs:2357-2358 doc / :2466-2496 impl", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/servo/rust-url/pull/1183", linkTxt: "servo/rust-url#1183", vf: 8 },
+  { crate: "base64", what: "GeneralPurposeConfig rustdoc cites non-existent DecodePaddingMode variant names (real: RequireCanonical/RequireNone)", site: "engine/general_purpose/mod.rs:332/388/391", kind: "② Docs",
     st: "reported", stTxt: "Reported", link: "https://github.com/marshallpierce/rust-base64/pull/318", linkTxt: "rust-base64#318" },
   { crate: "byteorder", what: "write_uint family: nbytes &lt;= buf.len() precondition missing from # Panics", site: "lib.rs:1952/1966", kind: "② Docs",
     st: "reported", stTxt: "Reported", link: "https://github.com/BurntSushi/byteorder/pull/230", linkTxt: "byteorder#230" },
@@ -260,32 +301,30 @@ const FINDINGS = [
     st: "reported", stTxt: "Reported", link: "https://github.com/rust-num/num-integer/pull/84", linkTxt: "num-integer#84" },
   { crate: "num-integer", what: "is_multiple_of(MIN, −1) lacks the −1 guard", site: "lib.rs:574", kind: "② Docs",
     st: "reported", stTxt: "Reported", link: "https://github.com/rust-num/num-integer/pull/83", linkTxt: "num-integer#83" },
-  { crate: "bit-vec", what: "split_off leaves an extra zero storage block (0&lt;nbits%32&lt;=at%32), breaking the storage-length invariant — safe methods all()/count_zeros() return wrong results", site: "lib.rs:1449-1487", kind: "② Structure",
-    st: "reported", stTxt: "Reported", link: "https://github.com/contain-rs/bit-vec/issues/167", linkTxt: "bit-vec#167" },
-  { crate: "glob", what: "Pattern::new(\"a/[b/c]\") compiles (the char class swallows /) while glob()/glob_with() reject the same string — the two APIs diverge on one pattern; doc only cites Pattern::new", site: "code lib.rs:246-252 / :703-711 / doc :171-172", kind: "② Docs",
+  { crate: "glob", what: "Pattern::new(\"a/[b/c]\") compiles while glob()/glob_with() reject the same string — the two APIs diverge; doc only cites Pattern::new",
+    site: "code lib.rs:246-252 / :703-711 / doc :171-172", kind: "② Docs",
     st: "reported", stTxt: "Reported", link: "https://github.com/rust-lang/glob/issues/196", linkTxt: "glob#196" },
-  { crate: "idna", what: "early-return Passthrough sites gate !had_errors only under debug_assert — a CheckBidi-invalid input panics in debug, silently returns Ok(Passthrough) in release; to_unicode also drops the guaranteed U+FFFD", site: "uts46.rs:827-830/858-861/913-915", kind: "① Code bug",
+  { crate: "idna", what: "Passthrough sites gate !had_errors only under debug_assert — a CheckBidi-invalid input panics in debug, silently passes in release; to_unicode drops the U+FFFD guarantee", site: "uts46.rs:827-830/858-861/913-915", kind: "① Code bug",
     st: "reported", stTxt: "Reported", link: "https://github.com/servo/rust-url/issues/1181", linkTxt: "servo/rust-url#1181", vf: 8 },
-  { crate: "integer-encoding", what: "read_varint: ① overflow misreported as EOF (doc says truncated); ② overlong varint consumes one extra byte", site: "reader.rs:19-21 doc / :95-107 impl", kind: "①/②",
+  { crate: "integer-encoding", what: "read_varint: overflow misreported as EOF (doc says truncated); an overlong varint consumes one extra byte",
+    site: "reader.rs:19-21 doc / :95-107 impl", kind: "①/②",
     st: "reported", stTxt: "Reported", link: "https://github.com/dermesser/integer-encoding-rs/issues/47", linkTxt: "integer-encoding#47" },
   { crate: "slab", what: "get2_mut panics on an out-of-bounds key; rustdoc promises None", site: "lib.rs:796/800", kind: "① Code bug",
     st: "reported", stTxt: "Reported", link: "https://github.com/tokio-rs/slab/issues/168", linkTxt: "tokio-rs/slab#168" },
-  { crate: "url", what: "set_scheme doc bullet 3 promises Err for file (with host) switching to special schemes — the implementation returns Ok and actually migrates; the doc conditions and the code gates diverge on two further arms", site: "lib.rs:2357-2358 doc / :2466-2496 impl", kind: "② Docs",
-    st: "reported", stTxt: "Reported", link: "https://github.com/servo/rust-url/issues/1182", linkTxt: "servo/rust-url#1182", vf: 8 },
   { crate: "base64", what: "add_padding doc “at least 2” insufficient — withdrawn: all call sites safe", site: "encode.rs:133/136-146", kind: "FP",
     st: "fp", stTxt: "FP withdrawn", link: "https://github.com/marshallpierce/rust-base64/pull/317", linkTxt: "rust-base64#317" },
   { crate: "humantime", what: "add_current carry off-by-one: out-of-range input panics instead of Err(NumberOverflow)", site: "duration.rs:296", kind: "① Code bug",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/chronotope/humantime/pull/73", linkTxt: "chronotope/humantime#73" },
+  { crate: "byteorder", what: "read_{uint,int,uint128,int128} panic on out-of-range nbytes; # Errors only", site: "io.rs:429/454/462/470", kind: "①/②",
+    st: "known", stTxt: "Reported elsewhere", link: "https://github.com/BurntSushi/byteorder/issues/224", linkTxt: "byteorder#224" },
+  { crate: "byteorder", what: "write_int silently truncates: write_int(100000, 2) → -31072", site: "lib.rs:1938", kind: "② Docs",
+    st: "known", stTxt: "Reported by others", link: "https://github.com/BurntSushi/byteorder/issues/205", linkTxt: "byteorder#205" },
   { crate: "glob", what: "panics on a non-UTF-8 filename under require_literal_leading_dot", site: "lib.rs:964", kind: "① Code bug",
     st: "known", stTxt: "Fix PR exists", link: "https://github.com/rust-lang/glob/pull/162", linkTxt: "glob#162" },
   { crate: "hex", what: "InvalidStringLength doc has the length condition reversed (hex_len*2==N vs hex_len==2N)", site: "error.rs:12-18", kind: "② Docs",
     st: "known", stTxt: "Fix PR exists", link: "https://github.com/KokaKiwi/rust-hex/pull/99", linkTxt: "rust-hex#99" },
   { crate: "humantime", what: "empty fraction “.Z” accepted; duplicate of upstream PR #75", site: "date.rs:169/184-186", kind: "② Docs",
     st: "known", stTxt: "Fix PR exists", link: "https://github.com/chronotope/humantime/pull/75", linkTxt: "humantime#75" },
-  { crate: "byteorder", what: "read_{uint,int,uint128,int128} panic on out-of-range nbytes; # Errors only", site: "io.rs:429/454/462/470", kind: "①/②",
-    st: "known", stTxt: "Reported elsewhere", link: "https://github.com/BurntSushi/byteorder/issues/224", linkTxt: "byteorder#224" },
-  { crate: "byteorder", what: "write_int silently truncates: write_int(100000, 2) → -31072", site: "lib.rs:1938", kind: "② Docs",
-    st: "known", stTxt: "Reported by others", link: "https://github.com/BurntSushi/byteorder/issues/205", linkTxt: "byteorder#205" },
   { crate: "humantime", what: "format_rfc3339 panics on pre-epoch SystemTime", site: "date.rs:263-264", kind: "① Code bug",
     st: "known", stTxt: "Reported by others", link: "https://github.com/chronotope/humantime/issues/76", linkTxt: "humantime#76" },
   { crate: "num-integer", what: "gcd wraps negative in release (MIN case), violating the non-negative invariant", site: "lib.rs:497-514", kind: "② Weak",
@@ -305,6 +344,7 @@ const CRATE_REPO = {
   slab: "tokio-rs/slab",
   "generational-arena": "fitzgen/generational-arena",
   humantime: "chronotope/humantime",
+  jiff: "BurntSushi/jiff",
   form_urlencoded: "servo/rust-url",
   "num-integer": "rust-num/num-integer",
   hex: "KokaKiwi/rust-hex",
@@ -312,6 +352,7 @@ const CRATE_REPO = {
   siphasher: "jedisct1/rust-siphash",
   untrusted: "briansmith/untrusted",
   "bit-vec": "contain-rs/bit-vec",
+  "bit-set": "contain-rs/bit-set",
   crc: "mrhooray/crc-rs",
   base64: "marshallpierce/rust-base64",
   base64ct: "RustCrypto/formats",
@@ -333,10 +374,10 @@ function crateLinkHTML(name) { return `<a href="${CRATE_URL[name]}" target="_bla
 (function tiles() {
   const el = document.getElementById("tiles");
   const items = [
-    { label: "Crates verified", value: "24" },
-    { label: "Verified code", value: "16,954 LoC" },
-    { label: "Translation coverage", value: "51.5%" },
-    { label: "Registered findings", value: "24", sub: "filed / fixed / known-duplicated" },
+    { label: "Crates verified", value: "26" },
+    { label: "Verified code", value: "25,195 LoC" },
+    { label: "Translation coverage", value: "31.8%" },
+    { label: "Registered findings", value: "36", sub: "filed / fixed / known-duplicated" },
   ];
   for (const t of items) {
     const d = document.createElement("div"); d.className = "tile";
@@ -462,7 +503,7 @@ function bindTip(target, build) {
     tb.appendChild(tr);
   }
   const trT = document.createElement("tr");
-  trT.innerHTML = `<td><b>Total</b></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.spec}</b></td><td class="num"><b>${T.proof}</b></td><td class="num"><b>${T.trusted}</b></td><td class="num"><b>${T.comment}</b></td><td class="num"><b>${T.hExec}</b></td><td>Coverage ${T.cov}% (all-line total across 21 crates)</td>`;
+  trT.innerHTML = `<td><b>Total</b></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.spec}</b></td><td class="num"><b>${T.proof}</b></td><td class="num"><b>${T.trusted}</b></td><td class="num"><b>${T.comment}</b></td><td class="num"><b>${T.hExec}</b></td><td>Coverage ${T.cov}% (all-line total across 26 crates)</td>`;
   tb.appendChild(trT);
   table.appendChild(tb); tbl.appendChild(table);
 })();
@@ -517,7 +558,7 @@ function bindTip(target, build) {
     tb.appendChild(tr);
   }
   const trT = document.createElement("tr");
-  trT.innerHTML = `<td><b>Total (21 crates)</b></td><td></td><td></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.up}</b></td><td class="num"><b>${T.cov}%</b></td><td>—</td><td>—</td>`;
+  trT.innerHTML = `<td><b>Total (26 crates)</b></td><td></td><td></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.up}</b></td><td class="num"><b>${T.cov}%</b></td><td>—</td><td>—</td>`;
   tb.appendChild(trT);
   table.appendChild(tb); tbl.appendChild(table);
 })();
@@ -527,13 +568,13 @@ function bindTip(target, build) {
   const host = document.getElementById("findings");
   const table = document.createElement("table");
   table.className = "findings";
-  table.innerHTML = `<thead><tr><th>#</th><th>crate</th><th>finding</th><th>site</th><th>attribution</th><th>status</th></tr></thead>`;
+  table.innerHTML = `<thead><tr><th>#</th><th>crate</th><th>finding</th><th>attribution</th><th>status</th></tr></thead>`;
   const tb = document.createElement("tbody");
   FINDINGS.forEach((f, i) => {
     const tr = document.createElement("tr");
     const tdC = document.createElement("td"); tdC.innerHTML = crateLinkHTML(f.crate);
     const tdW = document.createElement("td"); tdW.innerHTML = f.what;
-    const tdS = document.createElement("td"); const code = document.createElement("code"); code.textContent = f.site; tdS.appendChild(code);
+    if (f.site) { const code = document.createElement("code"); code.className = "site"; code.textContent = f.site; tdW.appendChild(code); }
     const tdK = document.createElement("td"); const kd = document.createElement("span"); kd.className = "kind"; const kb = document.createElement("b"); kb.textContent = f.kind; kd.appendChild(kb); tdK.appendChild(kd);
     const tdSt = document.createElement("td");
     const chip = document.createElement("span"); chip.className = "chip " + STATUS_CLS[f.st];
@@ -548,7 +589,7 @@ function bindTip(target, build) {
       a.textContent = f.linkTxt || f.link; a.style.marginLeft = "6px";
       tdSt.appendChild(a);
     }
-    const tds = [i + 1, tdC, tdW, tdS, tdK, tdSt].map(v => typeof v === "number" ? (() => { const t = document.createElement("td"); t.className = "num"; t.textContent = v; return t; })() : v);
+    const tds = [i + 1, tdC, tdW, tdK, tdSt].map(v => typeof v === "number" ? (() => { const t = document.createElement("td"); t.className = "num"; t.textContent = v; return t; })() : v);
     tr.append(...tds);
     tb.appendChild(tr);
   });

@@ -7776,6 +7776,14 @@ impl BitVec {
             forall|j: usize|
                 old(self).nbits <= j && j < final(self).nbits ==>
                 bit_at(final(self).storage@, final(self).nbits, j) == value,
+            // the fresh words carry the fill value face for the
+            // non-tail positions (the last fresh word is reshaped by the
+            // trailing fix, so its exact fill face stays at the bit level)
+            forall|j2: usize|
+                (old(self).storage@.len() as int) <= (j2 as int)
+                    && (j2 as int) < ((final(self).storage@.len() - 1) as int)
+                ==> final(self).storage@[j2 as int]
+                    == (if value { 4294967295u32 } else { 0u32 }),
     {
         let new_nbits = self.nbits + n;
         let new_nblocks = blocks_for_bits_exec(new_nbits);
@@ -7959,6 +7967,34 @@ impl BitVec {
             let L = blocks_for_bits(nO);
             assert(s0 == old(self).storage@);
             assert(pre_fix.len() == new_nblocks as int);
+            // the fill-value face of the fresh tail words: pre_fix (the
+            // push-loop result) carried full_value over the fresh range;
+            // fix_last_block only reshapes the last word's padding bits
+            if num_cur_blocks < new_nblocks {
+                assert(forall|m: usize| (num_cur_blocks as int) <= (m as int)
+                    && (m as int) < (pre_fix.len() as int)
+                    ==> pre_fix[m as int] == full_value);
+                assert(num_cur_blocks == (s1.len() as usize));
+                assert(s0.len() == (s1.len() as int));
+                assert(full_value == (if value { 4294967295u32 } else { 0u32 }));
+            } else {
+                assert((s1.len() as int) >= (new_nblocks as int));
+            }
+            // the non-tail fresh words keep the full_value face
+            assert(forall|w3: usize| (num_cur_blocks as int) <= (w3 as int)
+                && (w3 as int) < ((new_nblocks - 1) as int)
+                ==> final(self).storage@[w3 as int]
+                    == (if value { 4294967295u32 } else { 0u32 })) by {
+                if (num_cur_blocks as int) < ((new_nblocks - 1) as int) {
+                    assert(forall|w4: usize| (num_cur_blocks as int) <= (w4 as int)
+                        && (w4 as int) < (pre_fix.len() as int)
+                        ==> pre_fix[w4 as int] == full_value);
+                    assert(forall|w5: usize| (w5 as int) < (pre_fix.len() as int)
+                        && w5 != (((pre_fix.len() - 1) as usize))
+                        ==> final(self).storage@[w5 as int] == pre_fix[w5 as int]);
+                    assert((num_cur_blocks as int) == (s0.len() as int));
+                }
+            }
             assert(nF == nO + n);
             // nO <= 32 * L (equality only when e == 0)
             assert((nO as int) <= 32 * (L as int)) by {
@@ -10788,6 +10824,97 @@ pub proof fn lemma_hash_feed_upto_step(bv: &BitVec, w: usize, w1: usize)
     assert forall|i: int| 0 <= i < (1 + (w as int) + 1) implies
         t[i] == hash_feed_upto(bv, w1)[i] by { }
     lemma_seq_ext_equal(t, hash_feed_upto(bv, w1));
+}
+
+// ===========================================================================
+// byte<->word bridge (batch-H4 append): the to_bytes/from_bytes round
+// trip over the existing byte model (bit_u8 / from_bytes_bit /
+// bytes_for_bits -- no new byte format model is introduced here). The
+// hypotheses are the exec postcondition faces of to_bytes and
+// from_bytes, so a caller passes the outputs of those two calls (or
+// any data satisfying the same faces). Faces delivered: (a) the
+// decoded universe is the byte-aligned ceiling (8 * bytes_for_bits --
+// the upstream to_bytes doc's trailing-bits-filled-with-false width);
+// (b) every bit below the original width decodes back to the source
+// bit; (c) the pad region (original width up to the new universe)
+// reads false.
+// ===========================================================================
+
+/// Round-trip member face: a byte sequence carrying a to_bytes image of
+/// an orig_nb-wide vector, decoded through the from_bytes per-bit
+/// model.
+pub proof fn lemma_bytes_roundtrip_member(
+    orig_stg: Seq<u32>,
+    orig_nb: usize,
+    back_stg: Seq<u32>,
+    back_nb: usize,
+    bytes: Seq<u8>,
+)
+    requires
+        (back_nb as int) == 8 * (bytes.len() as int),
+        bytes.len() == bytes_for_bits(orig_nb),
+        forall|j: usize, q: usize|
+            j < bytes.len() && q < 8 ==>
+            #[trigger] bit_u8(bytes[j as int], (7 - (q as int)))
+                == (if (8 * j + q) < orig_nb {
+                    bit_at(orig_stg, orig_nb, (8 * j + q) as usize)
+                } else {
+                    false
+                }),
+        forall|i: usize|
+            i < back_nb ==>
+            (#[trigger] bit_at(back_stg, back_nb, i)
+                == from_bytes_bit(bytes, i)),
+    ensures
+        (orig_nb as int) <= (back_nb as int),
+        (back_nb as int) == 8 * (bytes_for_bits(orig_nb) as int),
+        forall|i: usize|
+            i < orig_nb ==>
+            (#[trigger] bit_at(back_stg, back_nb, i)
+                == bit_at(orig_stg, orig_nb, i)),
+        forall|i: usize|
+            orig_nb <= i && i < back_nb ==>
+            (#[trigger] bit_at(back_stg, back_nb, i) == false),
+{
+    // (a) the byte-aligned ceiling covers the original width
+    assert((orig_nb as int) == 8int * ((orig_nb as int) / 8int)
+        + ((orig_nb as int) % 8int));
+    assert((bytes_for_bits(orig_nb) as int) == ((orig_nb as int) / 8int)
+        + (if (orig_nb as int) % 8int > 0 { 1int } else { 0int }));
+    // (b) member preservation: source bit i, mirrored into byte i/8 at
+    // bit 7-i%8 by to_bytes, decodes back through from_bytes_bit
+    assert forall|i: usize| i < orig_nb implies
+        (bit_at(back_stg, back_nb, i) == bit_at(orig_stg, orig_nb, i)) by {
+        let j = i / 8;
+        let q = i % 8;
+        assert((i as int) == 8int * (j as int) + (q as int));
+        assert((q as int) < 8int);
+        assert((j as int) < (bytes.len() as int));
+        // the serial side mirrors source bit 8j+q into byte j bit 7-q
+        assert(bit_u8(bytes[j as int], (7 - (q as int)))
+            == bit_at(orig_stg, orig_nb, i));
+        // the decode model reads byte i/8 at bit 7-i%8 (bridge of the
+        // two shift-amount spellings of the same position)
+        assert((7 - (i % 8)) == (7 - (q as int)));
+        assert((1u8 << (7 - (i % 8))) == (1u8 << ((7 - (q as int)) as u8)));
+        assert(from_bytes_bit(bytes, i)
+            == bit_u8(bytes[j as int], (7 - (q as int))));
+    }
+    // (c) the pad region is false-filled (the trailing-bits doc face)
+    assert forall|i: usize| orig_nb <= i && i < back_nb implies
+        (bit_at(back_stg, back_nb, i) == false) by {
+        let j = i / 8;
+        let q = i % 8;
+        assert((i as int) == 8int * (j as int) + (q as int));
+        assert((q as int) < 8int);
+        assert((j as int) < (bytes.len() as int));
+        assert(!((8 * j + q) < orig_nb));
+        assert(bit_u8(bytes[j as int], (7 - (q as int))) == false);
+        assert((7 - (i % 8)) == (7 - (q as int)));
+        assert((1u8 << (7 - (i % 8))) == (1u8 << ((7 - (q as int)) as u8)));
+        assert(from_bytes_bit(bytes, i)
+            == bit_u8(bytes[j as int], (7 - (q as int))));
+    }
 }
 
 } // verus!
