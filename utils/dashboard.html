@@ -130,7 +130,7 @@
 <div class="wrap">
   <header>
     <h1>VeruFuzz · Verus verification progress</h1>
-    <p class="meta">Updated 2026-11-16 (initial version 2026-10-29) · verus 0.2026.10.26</p>
+    <p class="meta">Updated 2026-11-20 (initial version 2026-10-29) · verus 0.2026.10.26</p>
   </header>
 
   <div class="tiles" id="tiles"></div>
@@ -139,7 +139,7 @@
     <h2>Verified code composition per crate</h2>
     <p class="note">Line counts split into exec / spec / proof / trusted; hover for values.</p>
     <div class="legend" id="legend-comp"></div>
-    <svg id="svg-comp" role="img" aria-label="Stacked bar chart of verified code composition across 26 crates"></svg>
+    <svg id="svg-comp" role="img" aria-label="Stacked bar chart of verified code composition across 29 crates"></svg>
     <details class="tbl"><summary>Table view</summary><div id="tbl-comp"></div></details>
   </div>
 
@@ -153,7 +153,7 @@
 
   <div class="card">
     <h2>Bugs</h2>
-    <p class="note">36 findings (incl. 1 withdrawn FP), each anchored on a failed Verus obligation and backed by a PoC / runtime reproduction. Ordered: our reports first, then upstream-reported; within each group: fixed → fixing PR → issue open → FP withdrawn, alphabetical by crate within each status.</p>
+    <p class="note">39 findings (incl. 1 withdrawn FP), each anchored on a failed Verus obligation and backed by a PoC / runtime reproduction. Ordered: our reports first, then upstream-reported; within each group: fixed → fixing PR → issue open → FP withdrawn, alphabetical by crate within each status.</p>
     <div class="findings-wrap" id="findings"></div>
     <p class="note" style="margin-top:10px">① code bug · ② doc issue. Status: ✓ fixed · ↗ reported · ● reported by others / fix PR exists · ✕ FP withdrawn.</p>
   </div>
@@ -163,7 +163,9 @@
 
 <script>
 "use strict";
-/* ---- Data (line_count counts, 2026-10-29; +7 crates 2026-10-31; +bitflags 2026-11-01; +data-url/idna + bit-vec/form_urlencoded/base64 final batches; unified re-measure 2026-11-09; url/idna rows updated through batches A-L / A-K 2026-11-10/11; findings statuses refreshed 2026-11-12: bit-vec#167 fixed via PR #168, url#1182 fixed via PR #1183; + jiff batch 2026-11-16 (exec 7,687 / hExec 12; cov denominator = jiff + jiff-core combined 45,815 exec lines; findings +13: 12 fixed upstream within a week via jiff#695/#699/#701/#702/#705/#709 — F2–F5 filed as one issue #696, F6/F7/F8/F10/F12 as one docs PR #709 — and F13 not filed); + bit-set batch 2026-11-12 (exec 554 / hExec 592 / cov 130.7 shown capped at 100; 0 upstream findings); bit-vec row refreshed to the bit-set H4 bridge-lemma values (spec/proof/comment +30/+65/+30) ---- */
+/* ---- Data (line_count counts, 2026-10-29 baseline.
+  Batches: +7 crates 10-31 · bitflags 11-01 · unified re-measure 11-09 · url A-L / idna A-K 11-10/11 · bit-set 11-12 (its H4 bridge lemmas refreshed the bit-vec row's spec/proof/comment) · jiff 11-16 (cov denominator = jiff + jiff-core combined 45,815 exec) · faest / ignore / globset rows 11-20, 26 -> 29 crates, line counts fresh-measured on the post-fix twins (faest @ 9ccc68c0, ignore/globset @ 178cc02).
+  Finding-status timeline: bit-vec#167 -> PR #168, url#1182 -> PR #1183 (11-12); jiff 12/13 fixed same week via #695/#699/#701/#702/#705/#709 (F2-F5 filed as one issue #696, F6-F8+F10/F12 as one docs PR #709); ignore #3609/#3605 (11-18), globset #3613 (11-20), base64 F2 -> base64#318 (11-19); faest iv_pre known-dup dropped from the bugs table (record-only, faest-rs#34) ---- */
 const S = {
   exec:    { name: "exec (translated)",  css: "var(--series-exec)" },
   spec:    { name: "spec (contracts)",   css: "var(--series-spec)" },
@@ -173,7 +175,7 @@ const S = {
 const CRATES = [
   { crate: "base64",          exec: 1008, spec: 1939, proof: 4116, trusted:   0, comment: 1460, hExec: 358, up: 5100, cov: 19.8,
     ver: "0.23.1", sha: "5b98ee180cc7c2a64af6cb12c724b1721550e0d0",
-    res: "src 10 files 156v/2e (2e = add_padding withdrawn anchors, byte-identical) · harness 5 files: 27 witness theorems + 2 roundtrip theorems (encode fast-path + decode integration + S*-tail + ② decode(encode(x))==x closed, batches D–I, 2026-11-08/09) · rt both profiles ✓", anchor: "2 (add_padding doc: pre-fix index out of bounds at encode.rs:142)" },
+    res: "src 10 files 156v/2e (2e = add_padding withdrawn anchors, byte-identical) · harness 5 files: 27 witness theorems + 2 roundtrip theorems (encode fast-path + decode integration + S*-tail + ② decode(encode(x))==x closed, batches D–I, 2026-11-08/09) · rt both profiles ✓", anchor: "2 (the add_padding doc anchor was withdrawn; the F2 doc variant-name typo fixed upstream via base64#318, merged 2026-11-19)" },
   { crate: "base64ct",        exec: 515, spec: 722, proof: 1029, trusted:   0, comment: 508, hExec:  31, up: 1068, cov: 48.2,
     ver: "1.8.3", sha: "4c5fadb155ebc05c4a8a3abc05e4e64a6a100614",
     res: "std padded/unpadded, all depths 0e · six alphabets bit-level all green · harness 113/126/120v/0e", anchor: "— (0e; 0 findings)" },
@@ -199,6 +201,10 @@ const CRATES = [
   { crate: "data-url",        exec: 1001, spec: 1043, proof:  982, trusted:   0, comment:  569, hExec:  27, up:  497, cov: 201.4, cap100: true,
     ver: "0.3.2", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
     res: "src mime 47v/0e · forgiving_base64 14v/0e · lib tree 95v/0e · ut_lib 98v/0e · ut_mime 56v/0e · ut_wpt 116v/0e (--rlimit 120 ledger) · ut_display 99v/0e (batches A–B, 2026-11-08/09; deferred vectors 4/4 green, Display faces mirrored, domain closed)", anchor: "— (0e; 0 findings; one class-3 transcription fix 0x2E→0x2F, verified-side only)" },
+  { crate: "faest",            exec: 5808, spec: 5296, proof: 14563, trusted: 4597, comment: 8075, hExec:  884, up: 8827, cov: 65.8,
+    ver: "0.3.0", sha: "9ccc68c06f2db762b91afc06b20826d5836d477a",
+    res: "lib 965v/0e · fa4 344 · fa5 393 · fa6 841 · fa9 330 · fa10 357 · fa10w 543 · fa11 1340 · fa12 1401 · fa13 1491 · fa6p 459, all 0e (15 green units, 14,181v; fa7/fa8/ut_fa8 carry the same two frozen z3 D-FA7-5 rows) · 17 batches FA1–FA14 2026-11-13/16 · rt: 5 local oracle crates + faest-ref interop probe (signatures byte-identical, KATs regenerated 3-way merged)",
+    anchor: "— (0e; the iv_pre spec deviation is shared with the faest-ref v2 line, tracked upstream #34 — recorded as known-dup, not listed in the bugs table; the other two candidates were retracted: EM SKE wire-neutral by interop, λ768 own transcription error caught in-chain)" },
   { crate: "form_urlencoded", exec: 307, spec: 316, proof: 158, trusted:   6, comment: 391, hExec: 212, up:  257, cov: 119.5, cap100: true,
     ver: "1.2.2", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
     res: "src 62v/1e (1e = for_suffix panic anchor) · 3 harnesses 0e · 2026-11-08 domain closure (the sole unsafe fn closed via the vstd UTF-8 model; closure/write surface blocked; trusted 6 = injected contracts)", anchor: "1 (for_suffix panic anchor; fixed upstream #1168 / PR #1172)" },
@@ -208,6 +214,10 @@ const CRATES = [
   { crate: "glob",            exec: 450, spec: 475, proof: 240, trusted:   0, comment: 449, hExec:   1, up:  950, cov: 47.4,
     ver: "0.3.4", sha: "057cef2824f5a96f738e52d7d8ca3e024381bcc6",
     res: "src 68v/1e · ut_pattern 75v/1e (matches_from obligations discharged for every star path; corrected figure, 2026-11-03 continued batch)", anchor: "1 (F1 anchor :964, reconciled to the current :138)" },
+  { crate: "globset",         exec: 1245, spec: 2858, proof: 2254, trusted:   65, comment: 4492, hExec: 1016, up: 1214, cov: 102.6, cap100: true,
+    ver: "0.4.21", sha: "178cc027e283fd965cb72d0a7395b219eada170c",
+    res: "lib 259v/0e · ut families 16 units, closing matrix 4,314v + 2 parked anchor asserts (GL1–GL8 2026-11-17/18, panels re-measured at close) · oracle/mirror dual arms TWOTREE 110 rows ALL-MATCH; local fnv/AES-oracle crates in-tree",
+    anchor: "1 (RequiredExtension::matches_all across-extension bucket skip; fixed upstream via ripgrep PR#3613, merged 2026-11-20)" },
   { crate: "hex",             exec: 198, spec: 197, proof: 272, trusted:   0, comment: 159, hExec: 125, up:  320, cov: 61.9,
     ver: "0.4.3", sha: "e25a8701f7f6b5ec4acedffcb4a45cfb69cc34eb",
     res: "4 harnesses 139v/0e (including re-verification of the cited src) · rt matrix decode 65536 + encode 512, all matching", anchor: "— (the sole finding F1 is a doc bug, merged upstream)" },
@@ -221,6 +231,10 @@ const CRATES = [
   { crate: "idna",            exec: 2015, spec: 3430, proof: 8862, trusted:  47, comment: 3520, hExec: 2293, up: 1752, cov: 115.0, cap100: true,
     ver: "1.1.0", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
     res: "uts46 376v/0e · punycode 161v/0e · deprecated 390v/0e · lib_errors 2v/0e · uts46_leaf 430v/0e · punycode_vectors 237v/0e · idnatest_v2_samples 399v/0e (rlimit ledger @100/200; batches A-K 2026-11-08/10: RFC 3492 + P1-P6 + ContextJ + lossy decoder (26.9M-input differential, 0 mismatch) + CheckBidi + mapping window + innermost label loop + E-TILE site wiring + census lemma family (11) + the E-TILE feeding-gate fix (ret.2 || !fail_fast); the top-level walk text is fully transcribed, peaking at 391v/5e, remaining accounting-glue faces handed over per stop-loss with patch scripts archived; the Passthrough lead was runtime-confirmed and filed as finding-1)", anchor: "1 (finding-1 Passthrough with had==true / to_unicode FFFD-guarantee break; filed as rust-url#1181) · punycode overflow doc-lead closed as harmless" },
+  { crate: "ignore",          exec: 3092, spec: 5138, proof: 2868, trusted: 1682, comment: 4971, hExec: 6971, up: 5214, cov: 59.3,
+    ver: "0.4.34", sha: "178cc027e283fd965cb72d0a7395b219eada170c",
+    res: "src (9 modules) 443v/0e incl. the post-fix strip/utf8 twin theorems · ut family green with 9 known anchor asserts (ut_ig4 8 + ut_ig5 1, prescriptions on file) · IG1–IG8 + IG-R re-anchor 2026-11-17/19 · rt cargo test 205/0 (patched 206/0) + git 2.50.1 parity battery + rg 11.0.2 end-to-end symptom",
+    anchor: "2 (strip_prefix partial-component strip -> fix PR #3609 merged 2026-11-18, also independently reported as #3603; add() drops post-invalid-UTF-8 lines -> fix PR #3605 merged 2026-11-18; both three-layer verified: runtime + full battery + Verus twin re-proof)" },
   { crate: "integer-encoding", exec: 749, spec: 329, proof:  599, trusted:   0, comment: 307, hExec: 295, up:  488, cov: 153.5, cap100: true,
     ver: "4.1.0", sha: "e0a10d01e86a38d0df177676c62f9a10c845ab53",
     res: "src 4 files 135v/34e (fixed.rs 59/0) · 3 harnesses · rt 4 PoC, both profiles ✓", anchor: "F3 write_fixedint 8-byte cap panic anchor (writer.rs:69-77)" },
@@ -252,9 +266,11 @@ const CRATES = [
     ver: "2.5.8", sha: "00a6ce58d02f4e0d43c5ca0702c0bedb8b1ebf3a",
     res: "parse_machine 293v/0e · ut_read_api 304v/0e · coverage_props 287v/0e · three new harness files fuzz_roundtrip 292v + wpt_samples 325v + wpt_samples_b 347v all 0e (batches A-L 2026-11-08/11: full read API + parser body + deep host real body (external 0) + write faces set_fragment/set_port/set_query/set_scheme/set_username/set_password + ipv4 exec tail chain + restricted-class fuzz/wpt harness over 37 verbatim samples; set_path/set_host and ipv6 exec remain parked with handoff notes)", anchor: "1 (finding-1 set_scheme doc bullet 3 vs the code gates; filed as rust-url#1182, fixed upstream via rust-url#1183) · twelve rlimit sites, all with ambient-flip evidence" },
 ];
-const T = { exec: 25195, spec: 29807, proof: 51149, trusted: 856, comment: 27384, hExec: 8480, up: 79176, cov: 31.8 };
+const T = { exec: 35340, spec: 43099, proof: 70834, trusted: 7200, comment: 44922, hExec: 17351, up: 94431, cov: 37.4 };
 
 const FINDINGS = [
+  { crate: "base64", what: "GeneralPurposeConfig rustdoc cites non-existent DecodePaddingMode variant names (real: RequireCanonical/RequireNone)", site: "engine/general_purpose/mod.rs:332/388/391", kind: "② Docs",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/marshallpierce/rust-base64/pull/318", linkTxt: "rust-base64#318" },
   { crate: "bit-vec", what: "nor/xnor with n%32&gt;0 break the documented “Returns true if self changed”", site: "lib.rs:1214-1221/1248-1255", kind: "② Docs",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/contain-rs/bit-vec/pull/166", linkTxt: "bit-vec#166" },
   { crate: "bit-vec", what: "split_off leaves an extra zero storage block (0&lt;nbits%32&lt;=at%32) — safe methods all()/count_zeros() return wrong results", site: "lib.rs:1449-1487", kind: "② Structure",
@@ -263,6 +279,12 @@ const FINDINGS = [
     st: "fixed", stTxt: "Fixed", link: "https://github.com/ia0/data-encoding/pull/181", linkTxt: "data-encoding#181" },
   { crate: "form_urlencoded", what: "for_suffix panics when start_position &gt; target.len() — undocumented", site: "lib.rs:222-229", kind: "② Docs",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/servo/rust-url/pull/1172", linkTxt: "servo/rust-url#1172" },
+  { crate: "globset", what: "RequiredExtensionStrategy::matches_all enumerates only the candidate-extension bucket: [“x/m*.a”, “y/n*.b”] × “x/mt.a” returns true while matches=[0], against the doc “all globs in this set match”", site: "lib.rs:933-944 (doc :365-370)", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/ripgrep/pull/3613", linkTxt: "ripgrep PR#3613" },
+  { crate: "ignore", what: "GitignoreBuilder::add stops at the first non-UTF-8 line and drops all later valid globs, against the doc “all other valid globs will still be added” (git accepts the rest of the file)", site: "gitignore.rs:417-427 (doc :404-405)", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/ripgrep/pull/3605", linkTxt: "ripgrep PR#3605" },
+  { crate: "ignore", what: "Unix strip_prefix strips partial components: a \"/home/foo\"-rooted matcher byte-strips the sibling \"/home/foobar\" to “bar” and over-ignores it; the not-under-root panic contract is silently bypassed (independently reported upstream as #3603)", site: "pathutil.rs:100-111 / consumer gitignore.rs:306", kind: "① Code bug",
+    st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/ripgrep/pull/3609", linkTxt: "ripgrep PR#3609" },
   { crate: "jiff", what: "Timestamp SubAssign adds instead of subtracts (<code>ts -= 400</code> advances by 400 s)", site: "jiff-core timestamp.rs:740-745/:753-758", kind: "① Code bug",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/BurntSushi/jiff/pull/695", linkTxt: "jiff#695" },
   { crate: "jiff", what: "checked_add/checked_sub return Ok for sums below Timestamp::MIN, against the documented error guarantee",
@@ -293,8 +315,6 @@ const FINDINGS = [
   { crate: "url", what: "set_scheme doc bullet 3 promises Err for file (with host) switching to special schemes — the implementation returns Ok and actually migrates",
     site: "lib.rs:2357-2358 doc / :2466-2496 impl", kind: "② Docs",
     st: "fixed", stTxt: "Fixed", link: "https://github.com/servo/rust-url/pull/1183", linkTxt: "servo/rust-url#1183", vf: 8 },
-  { crate: "base64", what: "GeneralPurposeConfig rustdoc cites non-existent DecodePaddingMode variant names (real: RequireCanonical/RequireNone)", site: "engine/general_purpose/mod.rs:332/388/391", kind: "② Docs",
-    st: "reported", stTxt: "Reported", link: "https://github.com/marshallpierce/rust-base64/pull/318", linkTxt: "rust-base64#318" },
   { crate: "byteorder", what: "write_uint family: nbytes &lt;= buf.len() precondition missing from # Panics", site: "lib.rs:1952/1966", kind: "② Docs",
     st: "reported", stTxt: "Reported", link: "https://github.com/BurntSushi/byteorder/pull/230", linkTxt: "byteorder#230" },
   { crate: "num-integer", what: "binomial(5,−3)==1: no domain guard for k&lt;0; multinomial is order-dependent", site: "lib.rs:1150-1168", kind: "② Docs",
@@ -345,6 +365,9 @@ const CRATE_REPO = {
   "generational-arena": "fitzgen/generational-arena",
   humantime: "chronotope/humantime",
   jiff: "BurntSushi/jiff",
+  ignore: "BurntSushi/ripgrep",
+  globset: "BurntSushi/ripgrep",
+  faest: "ait-crypto/faest-rs",
   form_urlencoded: "servo/rust-url",
   "num-integer": "rust-num/num-integer",
   hex: "KokaKiwi/rust-hex",
@@ -374,10 +397,10 @@ function crateLinkHTML(name) { return `<a href="${CRATE_URL[name]}" target="_bla
 (function tiles() {
   const el = document.getElementById("tiles");
   const items = [
-    { label: "Crates verified", value: "26" },
-    { label: "Verified code", value: "25,195 LoC" },
-    { label: "Translation coverage", value: "31.8%" },
-    { label: "Registered findings", value: "36", sub: "filed / fixed / known-duplicated" },
+    { label: "Crates verified", value: "29" },
+    { label: "Verified code", value: "35,340 LoC" },
+    { label: "Translation coverage", value: "37.4%" },
+    { label: "Registered findings", value: "39", sub: "filed / fixed / known-duplicated" },
   ];
   for (const t of items) {
     const d = document.createElement("div"); d.className = "tile";
@@ -503,7 +526,7 @@ function bindTip(target, build) {
     tb.appendChild(tr);
   }
   const trT = document.createElement("tr");
-  trT.innerHTML = `<td><b>Total</b></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.spec}</b></td><td class="num"><b>${T.proof}</b></td><td class="num"><b>${T.trusted}</b></td><td class="num"><b>${T.comment}</b></td><td class="num"><b>${T.hExec}</b></td><td>Coverage ${T.cov}% (all-line total across 26 crates)</td>`;
+  trT.innerHTML = `<td><b>Total</b></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.spec}</b></td><td class="num"><b>${T.proof}</b></td><td class="num"><b>${T.trusted}</b></td><td class="num"><b>${T.comment}</b></td><td class="num"><b>${T.hExec}</b></td><td>Coverage ${T.cov}% (all-line total across 29 crates)</td>`;
   tb.appendChild(trT);
   table.appendChild(tb); tbl.appendChild(table);
 })();
@@ -558,7 +581,7 @@ function bindTip(target, build) {
     tb.appendChild(tr);
   }
   const trT = document.createElement("tr");
-  trT.innerHTML = `<td><b>Total (26 crates)</b></td><td></td><td></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.up}</b></td><td class="num"><b>${T.cov}%</b></td><td>—</td><td>—</td>`;
+  trT.innerHTML = `<td><b>Total (29 crates)</b></td><td></td><td></td><td class="num"><b>${T.exec}</b></td><td class="num"><b>${T.up}</b></td><td class="num"><b>${T.cov}%</b></td><td>—</td><td>—</td>`;
   tb.appendChild(trT);
   table.appendChild(tb); tbl.appendChild(table);
 })();
